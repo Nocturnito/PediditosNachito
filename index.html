@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestor de Pedidos - Pro v3.2 (Nube)</title>
+    <title>Gestor de Pedidos - Pro v3.4 (Nube)</title>
     <style>
         * { box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f7f4;
+            background-color: #fbf9f4;
             color: #2d3748;
             padding: 15px;
             margin: 0;
@@ -17,27 +17,78 @@
             overflow-x: hidden;
         }
 
+        /* OVERLAY Y PANTALLA DE LOGIN OBLIGATORIO */
+        .login-screen-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(251, 249, 244, 0.98);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .login-card-modal {
+            background: white;
+            padding: 25px 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border: 1px solid #e2dacd;
+            width: 360px;
+            max-width: 90%;
+        }
+
+        .login-card-modal h2 {
+            margin-top: 0;
+            color: #2e7d32;
+            text-align: center;
+            font-size: 20px;
+        }
+
+        .login-tabs { display: flex; gap: 8px; margin-bottom: 15px; }
+        .btn-auth-tab {
+            flex: 1; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px;
+            background: #f7fafc; cursor: pointer; font-weight: bold; font-size: 12px;
+        }
+        .btn-auth-tab.activo { background: #2e7d32; color: white; border-color: #2e7d32; }
+
+        .auth-form-group { display: flex; flex-direction: column; gap: 10px; }
+        .auth-form-group input, .auth-form-group select {
+            padding: 9px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px; outline: none;
+        }
+        .auth-form-group input:focus { border-color: #2e7d32; }
+
+        /* HEADER SUPERIOR Y BARRA DE USUARIO */
+        .header-top-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            background: white; padding: 10px 18px; border-radius: 12px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 15px; border: 1px solid #e2dacd;
+            flex-wrap: wrap; gap: 10px;
+        }
+        .header-top-bar h2 { margin: 0; font-size: 16px; color: #2e7d32; font-weight: 700; }
+        
+        .user-status-badge {
+            display: flex; align-items: center; gap: 10px; background: #f0fdf4;
+            padding: 4px 12px; border-radius: 20px; border: 1px solid #bbf7d0; font-size: 12px; font-weight: bold;
+        }
+
         /* BARRA DE FILTROS SUPERIOR */
         .filtros-sucursal {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 15px;
-            background: white;
-            padding: 10px 15px;
-            border-radius: 12px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            align-items: center;
-            border-left: 5px solid #2e7d32;
-            flex-wrap: wrap;
-            width: 100%;
+            display: flex; gap: 8px; margin-bottom: 15px; background: white;
+            padding: 10px 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            align-items: center; border-left: 5px solid #2e7d32; border: 1px solid #e2dacd;
+            flex-wrap: wrap; width: 100%;
         }
         .filtros-sucursal span { font-weight: bold; color: #2e7d32; font-size: 13px; margin-right: 5px; }
+        
         .btn-filtro {
-            background-color: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9;
+            background-color: #f5f0eb; color: #2d3748; border: 1px solid #e2dacd;
             padding: 6px 12px; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 12px; transition: all 0.2s;
         }
-        .btn-filtro:hover { background-color: #c8e6c9; }
+        .btn-filtro:hover { background-color: #e6dfd3; }
         .btn-filtro.activo { background-color: #2e7d32; color: white; border-color: #2e7d32; box-shadow: 0 2px 4px rgba(46, 125, 50, 0.3); }
+        .btn-filtro.btn-inicio-tab { background-color: #e0f2fe; color: #0369a1; border-color: #bae6fd; }
+        .btn-filtro.btn-inicio-tab.activo { background-color: #0284c7; color: white; border-color: #0284c7; }
         .btn-filtro.btn-faltantes-tab { background-color: #fff3e0; color: #e65100; border-color: #ffe0b2; }
         .btn-filtro.btn-faltantes-tab.activo { background-color: #e65100; color: white; border-color: #e65100; }
         .btn-filtro.btn-archivados-tab { background-color: #f3e8ff; color: #6b21a8; border-color: #e9d5ff; }
@@ -46,68 +97,34 @@
         .btn-filtro.btn-compartidos-tab.activo { background-color: #c62828; color: white; border-color: #c62828; }
         .btn-filtro.btn-productos-tab { background-color: #e0f2fe; color: #0369a1; border-color: #bae6fd; }
         .btn-filtro.btn-productos-tab.activo { background-color: #0284c7; color: white; border-color: #0284c7; }
+        .btn-filtro.btn-cuentas-tab { background-color: #fef3c7; color: #92400e; border-color: #fde68a; }
+        .btn-filtro.btn-cuentas-tab.activo { background-color: #d97706; color: white; border-color: #d97706; }
 
         /* BUSCADOR GENERAL DE PEDIDOS */
         .barra-buscador-pedidos {
-            width: 100%;
-            margin-bottom: 15px;
-            background: white;
-            padding: 10px 15px;
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            border: 1px solid #e2e8f0;
+            width: 100%; margin-bottom: 15px; background: white; padding: 10px 15px;
+            border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); display: flex;
+            align-items: center; gap: 10px; border: 1px solid #e2dacd;
         }
         .input-buscador-pedidos {
-            flex: 1;
-            padding: 8px 12px;
-            border-radius: 6px;
-            border: 1px solid #cbd5e0;
-            font-size: 13px;
-            outline: none;
+            flex: 1; padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e0; font-size: 13px; outline: none;
         }
-        .input-buscador-pedidos:focus { border-color: #2e7d32; box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.2); }
 
         /* LAYOUT PRINCIPAL RESPONSIVE */
-        .main-layout {
-            display: flex;
-            gap: 15px;
-            width: 100%;
-            align-items: flex-start;
-        }
+        .main-layout { display: flex; gap: 15px; width: 100%; align-items: flex-start; }
+        .main-layout.forced-vertical { flex-direction: column !important; }
 
-        .left-col {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            min-width: 0;
-        }
-
-        .right-col {
-            width: 350px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            flex-shrink: 0;
-        }
+        .left-col { flex: 1; display: flex; flex-direction: column; gap: 15px; min-width: 0; width: 100%; }
+        .right-col { width: 350px; display: flex; flex-direction: column; gap: 15px; flex-shrink: 0; }
+        .main-layout.forced-vertical .right-col { width: 100% !important; }
 
         /* FORMULARIOS DESPLEGABLES */
-        .top-forms {
-            display: flex;
-            gap: 15px;
-            width: 100%;
-            flex-wrap: wrap;
-        }
-
+        .top-forms { display: flex; gap: 15px; width: 100%; flex-wrap: wrap; }
         .formulario-details, .panel-empleados-details {
             background: white; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            padding: 12px 15px; border: 1px solid #e2e8f0;
+            padding: 12px 15px; border: 1px solid #e2dacd;
         }
-
-        .formulario-details { border-top: 4px solid #f57c00; flex: 2; min-width: 280px; }
+        .formulario-details { border-top: 4px solid #e65100; flex: 2; min-width: 280px; }
         .panel-empleados-details { border-top: 4px solid #2e7d32; flex: 1; min-width: 240px; }
 
         .formulario-details summary, .panel-empleados-details summary {
@@ -122,29 +139,16 @@
         .tag-empleado { background: #e8f5e9; padding: 3px 8px; border-radius: 12px; font-size: 12px; display: flex; align-items: center; gap: 5px; color: #2e7d32; font-weight: 600; }
         .tag-empleado span { cursor: pointer; color: #d32f2f; font-weight: bold; }
 
-        /* CHAT GLOBAL REDIMENSIONABLE Y DESPLEGABLES DERECHOS */
+        /* CHAT GLOBAL Y PANELES DERECHOS */
         .panel-chat-details {
             background: white; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            border-top: 4px solid #2b6cb0; border: 1px solid #e2e8f0; padding: 10px;
+            border-top: 4px solid #2b6cb0; border: 1px solid #e2dacd; padding: 10px;
             resize: both; overflow: auto; min-height: 250px; height: 380px; width: 100%; min-width: 260px;
             display: flex; flex-direction: column;
         }
         .panel-chat-details summary { font-weight: bold; color: #2b6cb0; cursor: pointer; font-size: 13px; margin-bottom: 5px; }
         
-        .chat-container-inner {
-            display: flex; flex-direction: column; flex: 1; min-height: 0; width: 100%;
-        }
-
-        .chat-tabs { display: flex; gap: 4px; margin-bottom: 8px; }
-        .btn-chat-tab { flex: 1; padding: 4px; font-size: 11px; background: #edf2f7; border: 1px solid #cbd5e0; border-radius: 4px; cursor: pointer; }
-        .btn-chat-tab.activo { background: #2b6cb0; color: white; border-color: #2b6cb0; font-weight: bold; }
-
-        .chat-login-box, .chat-register-box {
-            display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed #cbd5e0;
-        }
-        .chat-login-box input, .chat-login-box select, .chat-register-box input, .chat-register-box select {
-            padding: 5px; font-size: 11px; border: 1px solid #cbd5e0; border-radius: 4px;
-        }
+        .chat-container-inner { display: flex; flex-direction: column; flex: 1; min-height: 0; width: 100%; }
         .chat-messages {
             flex: 1; min-height: 120px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px;
             padding: 6px; background: #fafafa; margin-bottom: 8px; display: flex; flex-direction: column; gap: 4px;
@@ -156,13 +160,18 @@
         .tag-chango { background-color: #f57f17; }
         .msg-actions { font-size: 10px; color: #718096; cursor: pointer; margin-left: 4px; }
 
-        /* PESTAÑA DESPLEGABLE DE SUGERENCIAS */
+        /* SUGERENCIAS EN NOTITAS DESPLEGABLES */
         .panel-sugerencias-details {
             background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px;
             padding: 10px 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid #16a34a;
         }
         .panel-sugerencias-details summary { font-weight: bold; color: #15803d; cursor: pointer; font-size: 13px; }
-        .caja-sugerencia { width: 100%; height: 70px; font-size: 11px; padding: 6px; border: 1px solid #cbd5e0; border-radius: 6px; margin-top: 6px; resize: vertical; }
+        
+        .lista-sugerencias-notitas { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+        .notita-sugerencia-item {
+            background: #fffde7; border: 1px solid #ffe082; border-left: 4px solid #fbc02d;
+            border-radius: 8px; padding: 8px 10px; font-size: 12px;
+        }
 
         /* NOTAS DE ACTUALIZACIONES */
         .actualizaciones {
@@ -192,14 +201,14 @@
         button.btn-archivar { background-color: #7e22ce; color: white; border: none; padding: 4px 8px; font-size: 11px; border-radius: 4px; cursor: pointer; }
         button.btn-accion { background-color: #f57c00; color: white; border: none; font-size: 11px; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
 
-        /* POST-ITS PERSONALIZABLES */
+        /* POST-ITS ORIGINALES */
         #contenedorPedidos { display: flex; flex-wrap: wrap; gap: 15px; width: 100%; align-items: flex-start; }
         
         .post-it { 
             background-color: #fffde7; border-radius: 10px; box-shadow: 0 3px 6px rgba(0,0,0,0.08); 
             width: 370px; min-width: 280px; max-width: 100%;
             display: flex; flex-direction: column; border-left: 5px solid #fbc02d; transition: background 0.3s ease;
-            resize: both; overflow: auto;
+            resize: both; overflow: auto; border: 1px solid #e2dacd;
         }
         .post-it.completado { background-color: #e8f5e9; border-left: 5px solid #2e7d32; }
 
@@ -223,7 +232,7 @@
         .remito-box input[type="file"] { display: none; }
         .btn-remito { background-color: #2b6cb0; color: white; border: none; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 10px; }
 
-        .nota-general-pedido { background: #fff3e0; border: 1px solid #ffe0b2; padding: 6px; border-radius: 4px; font-size: 11px; color: #e65100; margin-bottom: 8px; font-weight: 600; line-height: 1.3; }
+        .nota-general-pedido { background: #fff3e0; border: 1px solid #ffe082; padding: 6px; border-radius: 4px; font-size: 11px; color: #e65100; margin-bottom: 8px; font-weight: 600; line-height: 1.3; }
 
         .post-it-body { padding: 10px; }
 
@@ -245,44 +254,37 @@
         .seccion-faltantes { margin-top: 10px; padding-top: 8px; border-top: 1px dashed #cbd5e0; }
         .seccion-faltantes label { font-size: 11px; font-weight: bold; color: #c53030; display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
         .caja-faltantes { width: 100%; min-height: 70px; font-size: 11px; padding: 6px; border: 1px solid #cbd5e0; border-radius: 6px; resize: vertical; margin-bottom: 5px; background-color: #fff; }
-        
-        .buscador-caja {
-            width: 100%; padding: 6px 10px; font-size: 12px; border: 1px solid #cbd5e0; border-radius: 6px; margin-bottom: 8px; background: #ffffff;
-        }
+
+        .buscador-caja { width: 100%; padding: 6px 10px; font-size: 12px; border: 1px solid #cbd5e0; border-radius: 6px; margin-bottom: 8px; background: #ffffff; }
 
         .card-faltante-item { background: #ffffff; border: 1px solid #e2e8f0; padding: 8px; border-radius: 6px; margin-bottom: 6px; display: flex; flex-direction: column; gap: 4px; }
         .card-faltante-row { display: flex; align-items: center; gap: 6px; font-size: 11px; }
         .card-faltante-row input[type="text"] { width: 65px; padding: 2px 4px; font-size: 10px; border: 1px solid #cbd5e0; border-radius: 3px; }
         .card-faltante-row select { padding: 2px 4px; font-size: 10px; border: 1px solid #cbd5e0; border-radius: 3px; }
 
-        /* GRID Y CONTENEDORES */
-        .contenedor-faltantes-grid {
-            display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; width: 100%;
-        }
-        .box-faltantes-sucursal {
-            background: white; border-radius: 10px; padding: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid #cbd5e0;
-        }
+        /* GRID Y CONTENEDORES DE FALTANTES */
+        .contenedor-faltantes-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; width: 100%; }
+        .box-faltantes-sucursal { background: white; border-radius: 10px; padding: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid #cbd5e0; border: 1px solid #e2dacd; }
         .box-faltantes-sucursal.maipu { border-color: #2e7d32; }
         .box-faltantes-sucursal.mendoza { border-color: #e65100; }
         .box-faltantes-sucursal.chango { border-color: #f57f17; }
         .box-faltantes-sucursal.general { border-color: #c53030; background: #fff5f5; }
         .box-faltantes-sucursal h3 { margin: 0 0 8px 0; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
-        .area-copia-faltantes { width: 100%; height: 160px; font-size: 11px; padding: 6px; border: 1px solid #cbd5e0; border-radius: 6px; background: #fff; }
+        .area-copia-faltantes { width: 100%; height: 160px; font-size: 11px; padding: 6px; border: 1px solid #cbd5e0; border-radius: 6px; background: #fff; resize: vertical; }
 
-        /* TABLA DEL CATÁLOGO DE PRODUCTOS */
-        .box-productos-catalogo {
-            background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid #0284c7; width: 100%;
-        }
-        .tabla-productos {
-            width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px;
-        }
-        .tabla-productos th, .tabla-productos td {
-            padding: 8px 10px; text-align: left; border-bottom: 1px solid #e2e8f0;
-        }
+        /* TABLA CATÁLOGO Y GESTIÓN DE PRODUCTOS */
+        .box-productos-catalogo { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid #0284c7; width: 100%; }
+        .tabla-productos { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
+        .tabla-productos th, .tabla-productos td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
         .tabla-productos th { background: #f0f9ff; color: #0369a1; font-weight: bold; }
         .tabla-productos tr:hover { background: #f8fafc; }
 
-        /* REGLAS PARA PANTALLAS MÓVILES (SMARTPHONES) */
+        /* SECCIÓN GESTIÓN DE CUENTAS (ADMIN) */
+        .box-gestion-cuentas { background: white; padding: 18px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid #d97706; width: 100%; }
+        .tabla-cuentas { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
+        .tabla-cuentas th, .tabla-cuentas td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        .tabla-cuentas th { background: #fef3c7; color: #92400e; font-weight: bold; }
+
         @media (max-width: 850px) {
             body { padding: 8px; }
             .main-layout { flex-direction: column; }
@@ -296,9 +298,54 @@
 </head>
 <body>
 
+    <!-- OVERLAY DE INICIO DE SESIÓN / REGISTRO OBLIGATORIO -->
+    <div class="login-screen-overlay" id="screenOverlayLogin">
+        <div class="login-card-modal">
+            <h2>🛍️ Gestor de Pedidos</h2>
+            <p style="font-size:12px; text-align:center; color:#718096; margin-bottom:15px;">Inicia sesión o regístrate para acceder al sistema.</p>
+            
+            <div class="login-tabs">
+                <button class="btn-auth-tab activo" id="tabAuthLogin" onclick="setAuthMode('login')">Ingresar</button>
+                <button class="btn-auth-tab" id="tabAuthReg" onclick="setAuthMode('reg')">Registrarse</button>
+            </div>
+
+            <!-- FORMULARIO DE INGRESO -->
+            <div class="auth-form-group" id="formAuthLogin">
+                <input type="text" id="globalLoginUser" placeholder="Nombre de usuario">
+                <input type="password" id="globalLoginPass" placeholder="Contraseña">
+                <button class="btn-verde" style="width:100%; margin-top:5px;" onclick="ejecutarGlobalLogin()">Entrar al Sistema</button>
+            </div>
+
+            <!-- FORMULARIO DE REGISTRO -->
+            <div class="auth-form-group" id="formAuthReg" style="display:none;">
+                <input type="text" id="globalRegUser" placeholder="Nombre de usuario">
+                <input type="password" id="globalRegPass" placeholder="Contraseña">
+                <select id="globalRegSucursal">
+                    <option value="Maipu">Maipu (Verde)</option>
+                    <option value="Mendoza">Mendoza (Naranja)</option>
+                    <option value="Chango Mas">Chango Mas (Amarillo)</option>
+                </select>
+                <button class="btn-verde" style="width:100%; margin-top:5px;" onclick="ejecutarGlobalRegistro()">Crear Cuenta</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- HEADER SUPERIOR CON INFORMACIÓN DE SESIÓN ACTIVA -->
+    <div class="header-top-bar">
+        <h2>🛍️ Gestor de Pedidos Vitta</h2>
+        <div style="display:flex; gap:10px; align-items:center;">
+            <div class="user-status-badge">
+                👤 <span id="lblUserDisplayHeader">Invitado</span>
+                <button onclick="ejecutarGlobalLogout()" style="font-size:10px; padding:2px 6px; border:none; background:#cbd5e0; border-radius:4px; cursor:pointer;">Salir</button>
+            </div>
+            <button class="btn-filtro" onclick="toggleModoVertical()">📱 Acomodar en Vertical</button>
+        </div>
+    </div>
+
     <!-- BARRA DE FILTROS SUPERIOR -->
     <div class="filtros-sucursal">
         <span>Filtrar sucursal:</span>
+        <button class="btn-filtro btn-inicio-tab" onclick="filtrarSucursal('INICIO_HUB', this)">🏠 INICIO (Novedades/Chat)</button>
         <button class="btn-filtro activo" onclick="filtrarSucursal('Todos', this)">Todos</button>
         <button class="btn-filtro" onclick="filtrarSucursal('Mendoza', this)">Mendoza</button>
         <button class="btn-filtro" onclick="filtrarSucursal('Chango Mas', this)">Chango Mas</button>
@@ -308,18 +355,19 @@
         <button class="btn-filtro btn-faltantes-tab" onclick="filtrarSucursal('FALTANTES_SUCURSAL', this)">📊 FALTANTES POR SUCURSAL</button>
         <button class="btn-filtro btn-compartidos-tab" onclick="filtrarSucursal('FALTANTES_COMPARTIDOS', this)">🔴 FALTANTES GENERALES (COMPARTIDOS)</button>
         <button class="btn-filtro btn-productos-tab" onclick="filtrarSucursal('CATALOGO_PRODUCTOS', this)">📦 CATÁLOGO DE PRODUCTOS</button>
+        <button class="btn-filtro btn-cuentas-tab" id="btnTabGestionCuentas" style="display:none;" onclick="filtrarSucursal('GESTION_CUENTAS', this)">⚙️ GESTIÓN DE CUENTAS</button>
     </div>
 
-    <!-- BUSCADOR FLEXIBLE DE PEDIDOS POR NOMBRE Y FECHA -->
+    <!-- BUSCADOR FLEXIBLE DE PEDIDOS -->
     <div class="barra-buscador-pedidos" id="boxBuscadorPedidos">
         <span>🔍 <b>Buscar cliente:</b></span>
         <input type="text" id="buscadorPedidosInput" class="input-buscador-pedidos" placeholder="Escribe el nombre del cliente..." oninput="renderizarPedidos()">
     </div>
 
     <!-- LAYOUT PRINCIPAL -->
-    <div class="main-layout">
+    <div class="main-layout" id="mainLayoutContainer">
         <!-- COLUMNA IZQUIERDA -->
-        <div class="left-col">
+        <div class="left-col" id="columnaIzquierda">
             <div class="top-forms" id="bloqueFormularios">
                 <!-- FORMULARIO ARMADOR DESPLEGABLE -->
                 <details class="formulario-details" open>
@@ -364,77 +412,35 @@
         </div>
 
         <!-- COLUMNA DERECHA -->
-        <div class="right-col">
-            <!-- CHAT GLOBAL REDIMENSIONABLE -->
-            <details class="panel-chat-details" open>
+        <div class="right-col" id="columnaDerecha">
+            <!-- CHAT GLOBAL -->
+            <details class="panel-chat-details" id="boxChatGlobal" open>
                 <summary>💬 CHAT GLOBAL (Ajustable ⇲)</summary>
-                
                 <div class="chat-container-inner">
-                    <div class="chat-tabs">
-                        <button class="btn-chat-tab activo" id="tabChat1" onclick="cambiarSesionChat(1)">💬 Chat 1</button>
-                        <button class="btn-chat-tab" id="tabChat2" onclick="cambiarSesionChat(2)">💬 Chat 2</button>
-                    </div>
-
-                    <div id="chatAuthBox">
-                        <div class="chat-login-box">
-                            <input type="text" id="loginUser" placeholder="Usuario">
-                            <input type="password" id="loginPass" placeholder="Contraseña">
-                            <button class="btn-accion" onclick="loginChat()">Iniciar Sesión</button>
-                        </div>
-                        <details class="chat-register-box">
-                            <summary style="font-size:11px; cursor:pointer; color:#2b6cb0;">➕ Crear cuenta</summary>
-                            <input type="text" id="regUser" placeholder="Nombre usuario">
-                            <input type="password" id="regPass" placeholder="Contraseña">
-                            <select id="regSucursal">
-                                <option value="Maipu">Maipu (Verde)</option>
-                                <option value="Mendoza">Mendoza (Naranja)</option>
-                                <option value="Chango Mas">Chango Mas (Amarillo)</option>
-                            </select>
-                            <button class="btn-verde" style="padding:4px; font-size:11px; margin-top:4px;" onclick="registrarUsuarioChat()">Crear Cuenta</button>
-                        </details>
-                    </div>
-
-                    <div id="chatSessionBox" style="display:none; flex:1; flex-direction:column; min-height:0;">
-                        <div style="font-size:11px; margin-bottom:5px; font-weight:bold; color:#2d3748; display:flex; justify-content:space-between; align-items:center;">
-                            <span>👤 <b id="chatUserDisplay"></b></span>
-                            <button onclick="logoutChat()" style="font-size:10px; padding:2px 5px; border:none; background:#cbd5e0; border-radius:3px; cursor:pointer;">Salir</button>
-                        </div>
-                        <div class="chat-messages" id="chatMessagesBox"></div>
-                        <div style="display:flex; gap:4px; margin-top:auto;">
-                            <input type="text" id="chatInputMsg" placeholder="Mensaje..." style="flex:1; padding:4px; font-size:11px; border:1px solid #cbd5e0; border-radius:4px;">
-                            <button class="btn-verde" style="padding:4px 8px; font-size:11px;" onclick="enviarMensajeChat()">Enviar</button>
-                        </div>
+                    <div class="chat-messages" id="chatMessagesBox"></div>
+                    <div style="display:flex; gap:4px; margin-top:auto;">
+                        <input type="text" id="chatInputMsg" placeholder="Mensaje..." style="flex:1; padding:4px; font-size:11px; border:1px solid #cbd5e0; border-radius:4px;">
+                        <button class="btn-verde" style="padding:4px 8px; font-size:11px;" onclick="enviarMensajeChat()">Enviar</button>
                     </div>
                 </div>
             </details>
 
             <!-- PESTAÑA DESPLEGABLE DE SUGERENCIAS -->
-            <details class="panel-sugerencias-details" open>
+            <details class="panel-sugerencias-details" id="boxSugerencias" open>
                 <summary>💡 SUGERENCIAS DE MEJORA</summary>
-                <textarea class="caja-sugerencia" id="txtSugerencia" placeholder="Escribe aquí ideas o sugerencias..." oninput="guardarSugerencia(this.value)"></textarea>
+                <div style="margin-top:8px;">
+                    <textarea id="txtNuevaSugerencia" style="width:100%; height:50px; font-size:11px; padding:6px; border-radius:6px; border:1px solid #cbd5e0;" placeholder="Escribe una nueva sugerencia..."></textarea>
+                    <button class="btn-verde" style="width:100%; margin-top:4px; padding:5px; font-size:11px;" onclick="agregarSugerenciaNotita()">➕ Guardar Sugerencia</button>
+                    <div class="lista-sugerencias-notitas" id="contenedorNotitasSugerencias"></div>
+                </div>
             </details>
 
             <!-- NOTAS DE ACTUALIZACIONES -->
-            <div class="actualizaciones-container">
+            <div class="actualizaciones-container" id="boxActualizaciones">
                 <details class="actualizaciones" open>
                     <summary>📣 NOTAS DE ACTUALIZACIONES (Últimas 10)</summary>
                     <ul>
-                        <li><span class="version-badge">v3.2</span> <b>Sincronización en la Nube con Firebase:</b>
-                            <ul>
-                                <li>Los pedidos y cambios se comparten en tiempo real entre todos los usuarios.</li>
-                                <li>Pestaña desplegable de sugerencias añadida en el panel derecho.</li>
-                                <li>Chat redimensionable verticalmente e interfaz adaptada a móviles.</li>
-                            </ul>
-                        </li>
-                        <li><span class="version-badge">v3.1</span> <b>Fechas & Buscador Flexible:</b> Registro automático de fechas y búsqueda tolerant.</li>
-                        <li><span class="version-badge">v3.0</span> <b>Desbloqueo Total:</b> Edición libre sin bloqueo de inputs.</li>
-                        <li><span class="version-badge">v2.9</span> <b>Archivado de Pedidos:</b> Módulo para almacenar pedidos procesados.</li>
-                        <li><span class="version-badge">v2.8</span> <b>Faltantes Persistentes:</b> Acumulado continuo de productos faltantes.</li>
-                        <li><span class="version-badge">v2.7</span> <b>Suma de Cantidades:</b> Consolidación de kilos y unidades.</li>
-                        <li><span class="version-badge">v2.6</span> <b>Carga de Remitos:</b> Adjuntos PDF por cliente.</li>
-                        <li><span class="version-badge">v2.5</span> <b>Multi-Sucursal:</b> Separación de ítems por local.</li>
-                        <li><span class="version-badge">v2.4</span> <b>Faltantes Compartidos:</b> Stock global faltante.</li>
-                        <li><span class="version-badge">v2.3</span> <b>Detección Ambiguos:</b> Alerta automática en ítems imprecisos.</li>
+                        <li><span class="version-badge">v3.4</span> <b>Gestión de Productos & Autenticación Global:</b> Cuentas obligatorias, administración de usuarios y catálogo interactivo.</li>
                     </ul>
                 </details>
                 <div class="creador-firma">Creado por : Nazareno Martinez</div>
@@ -447,7 +453,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-        // Configuración de tu proyecto Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyC6BSUn8vxBEs3cSgMGUzYBjXiA8tcf0Co",
             authDomain: "pediditos-by-nacho.firebaseapp.com",
@@ -462,26 +467,27 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // Constantes del Catálogo
+        // DATOS INICIALES DEL SISTEMA
         const CATALOGO_AMBIGUO = ['sal', 'yerba', 'aceite', 'alfajor', 'harina', 'fideo', 'leche', 'té', 'te', 'miel', 'azucar', 'semillas', 'arroz', 'avena'];
-        const CATALOGO_PRODUCTOS_EXCEL = ["PROMO PAN KAUFER", "Alfajor CHOCOLEIT negro 0% AZUCAR SIN TACC", "Alfajor CELIENERGY Avellana B SIN TACC", "Yerba AJEDREZ PREMIUM CANCHADA 500 gr", "Barra MUECAS Manz Arand 45 gr", "Alfajor CHOCOLEIT blanco 0% AZUCAR SIN TACC", "EdulKONY 200 ml", "Harina de coco CUMANA 200 gr", "Leche Avena Italiana AMANDE 1 Lt", "Premezc. PAN con Psyillum Husk DICOMERE 450 gr SIN TACC", "Alfajor CELIENERGY Nuez SIN TACC", "Pistacho Natural SIN CASC CUMANA 150 gr", "Cereza Marrasquino CUMANA Fr. 200 gr", "Fideo SOYARROZ C Angel 300 gr", "Pistacho Con Cascara CUMANA 150 gr", "Tostadas de arroz DON MARCOS 120gr sin sal", "Miel ORGANICA CRUDA YUNGA ANDINA 330 gr", "Te Alcachofa H DEL OASIS 25 s", "Aceite de coco neutro COSACO 360 ml", "Fideos integrales MATILDE 400 gr GLUTEN", "Gallet. PEPAS DIA VITA 150 gr SIN TACC", "Snack Garbanzo Ahumado CROYDON 60 gr", "Gallet. MARLBORO Avena Coco Pasas 200 gr", "Te CHAI TISSAN Sembras 20 saq", "Aceite de Coco VIRGEN GODBLESS 500 cc", "Granola CRUNCHY Frutos Secos 500 gr", "Nuez Mariposa Extra Blanca 1 kg", "Tutuca Dulce Especial 1 kg", "Masitas Pepas Membrillo 1 kg", "Masitas Palitos Integrales 1 kg", "Fécula de Mandioca Especial 1 kg"];
+        const CATALOGO_INICIAL_DEFAULT = ["PROMO PAN KAUFER", "Alfajor CHOCOLEIT negro 0% AZUCAR SIN TACC", "Alfajor CELIENERGY Avellana B SIN TACC", "Yerba AJEDREZ PREMIUM CANCHADA 500 gr", "Barra MUECAS Manz Arand 45 gr", "Alfajor CHOCOLEIT blanco 0% AZUCAR SIN TACC", "EdulKONY 200 ml", "Harina de coco CUMANA 200 gr", "Leche Avena Italiana AMANDE 1 Lt", "Premezc. PAN con Psyillum Husk DICOMERE 450 gr SIN TACC", "Alfajor CELIENERGY Nuez SIN TACC", "Pistacho Natural SIN CASC CUMANA 150 gr", "Cereza Marrasquino CUMANA Fr. 200 gr", "Fideo SOYARROZ C Angel 300 gr", "Pistacho Con Cascara CUMANA 150 gr", "Tostadas de arroz DON MARCOS 120gr sin sal", "Miel ORGANICA CRUDA YUNGA ANDINA 330 gr", "Te Alcachofa H DEL OASIS 25 s", "Aceite de coco neutro COSACO 360 ml", "Fideos integrales MATILDE 400 gr GLUTEN", "Gallet. PEPAS DIA VITA 150 gr SIN TACC", "Snack Garbanzo Ahumado CROYDON 60 gr", "Gallet. MARLBORO Avena Coco Pasas 200 gr", "Te CHAI TISSAN Sembras 20 saq", "Aceite de Coco VIRGEN GODBLESS 500 cc", "Granola CRUNCHY Frutos Secos 500 gr", "Nuez Mariposa Extra Blanca 1 kg", "Tutuca Dulce Especial 1 kg", "Masitas Pepas Membrillo 1 kg", "Masitas Palitos Integrales 1 kg", "Fécula de Mandioca Especial 1 kg"];
 
-        // Variables Globales
         let pedidos = [];
         let empleados = ['Juan', 'Maria', 'Carlos'];
         let chatMensajes = [];
         let faltantesHistoricos = [];
+        let sugerenciasNotitas = [];
+        let catalogoProductos = [];
+        let faltantesEspecialesGuardados = { maipu: '', mendoza: '', chango: '', general: '' };
+        
         let chatUsuarios = [
             { user: 'Admin Fabri', pass: '2222', sucursal: 'Mendoza', isAdmin: true },
             { user: 'Admin Nacho', pass: '2222', sucursal: 'Maipu', isAdmin: true }
         ];
 
-        let sesionChatActiva = 1;
-        let usuarioSesion1 = JSON.parse(localStorage.getItem('chatUsuarioSesion1')) || null;
-        let usuarioSesion2 = JSON.parse(localStorage.getItem('chatUsuarioSesion2')) || null;
+        let usuarioSesionActiva = JSON.parse(localStorage.getItem('usuarioSesionGlobalV34')) || null;
         let sucursalActiva = 'Todos';
 
-        // --- CONEXIÓN EN TIEMPO REAL CON FIREBASE ---
+        // SINCRONIZACIÓN EN TIEMPO REAL
         onValue(ref(db, 'appData'), (snapshot) => {
             const data = snapshot.val();
             if (data) {
@@ -489,11 +495,15 @@
                 empleados = data.empleados || ['Juan', 'Maria', 'Carlos'];
                 chatMensajes = data.chatMensajes || [];
                 faltantesHistoricos = data.faltantesHistoricos || [];
+                sugerenciasNotitas = data.sugerenciasNotitas || [];
+                catalogoProductos = data.catalogoProductos || CATALOGO_INICIAL_DEFAULT;
+                faltantesEspecialesGuardados = data.faltantesEspecialesGuardados || { maipu: '', mendoza: '', chango: '', general: '' };
                 chatUsuarios = data.chatUsuarios || chatUsuarios;
 
+                actualizarEstadoAutenticacionUI();
                 renderizarEmpleados();
+                renderizarSugerenciasNotitas();
                 renderizarPedidos();
-                initChatUI();
             }
         });
 
@@ -503,6 +513,9 @@
                 empleados: empleados,
                 chatMensajes: chatMensajes,
                 faltantesHistoricos: faltantesHistoricos,
+                sugerenciasNotitas: sugerenciasNotitas,
+                catalogoProductos: catalogoProductos,
+                faltantesEspecialesGuardados: faltantesEspecialesGuardados,
                 chatUsuarios: chatUsuarios
             });
         }
@@ -512,57 +525,278 @@
             return txt.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
         }
 
-        function getUsuarioChatActual() {
-            return sesionChatActiva === 1 ? usuarioSesion1 : usuarioSesion2;
+        // CONTROL DE ACCESO Y AUTENTICACIÓN GLOBAL
+        function actualizarEstadoAutenticacionUI() {
+            const overlay = document.getElementById('screenOverlayLogin');
+            const lblUser = document.getElementById('lblUserDisplayHeader');
+            const btnTabAdmin = document.getElementById('btnTabGestionCuentas');
+
+            if (usuarioSesionActiva) {
+                // Verificar si los datos del usuario en sesión cambiaron en la nube
+                const userEnNube = chatUsuarios.find(u => u.user.toLowerCase() === usuarioSesionActiva.user.toLowerCase());
+                if (userEnNube) {
+                    usuarioSesionActiva = userEnNube;
+                    localStorage.setItem('usuarioSesionGlobalV34', JSON.stringify(userEnNube));
+                }
+
+                overlay.style.display = 'none';
+                lblUser.textContent = `${usuarioSesionActiva.user} (${usuarioSesionActiva.sucursal}) ${usuarioSesionActiva.isAdmin ? '👑 ADMIN' : ''}`;
+                
+                if (usuarioSesionActiva.isAdmin) {
+                    btnTabAdmin.style.display = 'inline-block';
+                } else {
+                    btnTabAdmin.style.display = 'none';
+                    if (sucursalActiva === 'GESTION_CUENTAS') sucursalActiva = 'Todos';
+                }
+            } else {
+                overlay.style.display = 'flex';
+                lblUser.textContent = 'Invitado';
+                btnTabAdmin.style.display = 'none';
+            }
         }
 
-        function setUsuarioChatActual(usr) {
-            if (sesionChatActiva === 1) {
-                usuarioSesion1 = usr;
-                localStorage.setItem('chatUsuarioSesion1', JSON.stringify(usr));
+        window.setAuthMode = function(modo) {
+            document.getElementById('tabAuthLogin').classList.toggle('activo', modo === 'login');
+            document.getElementById('tabAuthReg').classList.toggle('activo', modo === 'reg');
+            document.getElementById('formAuthLogin').style.display = modo === 'login' ? 'flex' : 'none';
+            document.getElementById('formAuthReg').style.display = modo === 'reg' ? 'flex' : 'none';
+        };
+
+        window.ejecutarGlobalLogin = function() {
+            const u = document.getElementById('globalLoginUser').value.trim();
+            const p = document.getElementById('globalLoginPass').value.trim();
+            const userFound = chatUsuarios.find(x => x.user.toLowerCase() === u.toLowerCase() && x.pass === p);
+            
+            if (userFound) {
+                usuarioSesionActiva = userFound;
+                localStorage.setItem('usuarioSesionGlobalV34', JSON.stringify(userFound));
+                actualizarEstadoAutenticacionUI();
+                renderizarPedidos();
             } else {
-                usuarioSesion2 = usr;
-                localStorage.setItem('chatUsuarioSesion2', JSON.stringify(usr));
+                alert("Usuario o contraseña incorrectos.");
             }
+        };
+
+        window.ejecutarGlobalRegistro = function() {
+            const u = document.getElementById('globalRegUser').value.trim();
+            const p = document.getElementById('globalRegPass').value.trim();
+            const s = document.getElementById('globalRegSucursal').value;
+
+            if (!u || !p) { alert("Ingresa usuario y contraseña."); return; }
+            if (chatUsuarios.find(x => x.user.toLowerCase() === u.toLowerCase())) { alert("Ese usuario ya existe."); return; }
+
+            const nuevoUsr = { user: u, pass: p, sucursal: s, isAdmin: false };
+            chatUsuarios.push(nuevoUsr);
+            guardarEnNube();
+
+            usuarioSesionActiva = nuevoUsr;
+            localStorage.setItem('usuarioSesionGlobalV34', JSON.stringify(nuevoUsr));
+            actualizarEstadoAutenticacionUI();
             renderizarPedidos();
-        }
+            alert("Cuenta creada con éxito.");
+        };
+
+        window.ejecutarGlobalLogout = function() {
+            usuarioSesionActiva = null;
+            localStorage.removeItem('usuarioSesionGlobalV34');
+            actualizarEstadoAutenticacionUI();
+        };
+
+        window.toggleModoVertical = function() {
+            document.getElementById('mainLayoutContainer').classList.toggle('forced-vertical');
+        };
 
         window.filtrarSucursal = function(sucursal, botonElemento) {
             sucursalActiva = sucursal;
             document.querySelectorAll('.btn-filtro').forEach(btn => btn.classList.remove('activo'));
             botonElemento.classList.add('activo');
 
+            const colDer = document.getElementById('columnaDerecha');
             const formTop = document.getElementById('bloqueFormularios');
             const boxBusqueda = document.getElementById('boxBuscadorPedidos');
 
-            if (sucursal.startsWith('FALTANTES') || sucursal === 'CATALOGO_PRODUCTOS') {
+            if (sucursal === 'INICIO_HUB') {
+                colDer.style.display = 'flex';
                 formTop.style.display = 'none';
                 boxBusqueda.style.display = 'none';
-            } else if (sucursal === 'PEDIDOS_ARCHIVADOS') {
-                formTop.style.display = 'none';
-                boxBusqueda.style.display = 'flex';
             } else {
-                formTop.style.display = 'flex';
+                colDer.style.display = 'none';
                 boxBusqueda.style.display = 'flex';
+                if (sucursal.startsWith('FALTANTES') || sucursal === 'CATALOGO_PRODUCTOS' || sucursal === 'GESTION_CUENTAS') {
+                    formTop.style.display = 'none';
+                } else {
+                    formTop.style.display = 'flex';
+                }
             }
 
             renderizarPedidos();
         };
 
-        // --- EMPLEADOS ---
-        window.agregarEmpleado = function() {
-            const input = document.getElementById('nuevoEmpleado');
+        // GESTIÓN DE PRODUCTOS DEL CATÁLOGO
+        window.agregarProductoCatalogo = function() {
+            const input = document.getElementById('nuevoProductoNombre');
             const nombre = input.value.trim();
-            if (nombre && !empleados.includes(nombre)) {
-                empleados.push(nombre);
+            if (nombre) {
+                if (catalogoProductos.some(p => p.toLowerCase() === nombre.toLowerCase())) {
+                    alert("El producto ya existe en el catálogo.");
+                    return;
+                }
+                catalogoProductos.push(nombre);
                 input.value = '';
                 guardarEnNube();
             }
         };
 
+        window.modificarProductoCatalogo = function(idx) {
+            const prodActual = catalogoProductos[idx];
+            const nuevoNombre = prompt("Modificar producto:", prodActual);
+            if (nuevoNombre && nuevoNombre.trim() !== '') {
+                catalogoProductos[idx] = nuevoNombre.trim();
+                guardarEnNube();
+            }
+        };
+
+        window.eliminarProductoCatalogo = function(idx) {
+            if (confirm(`¿Eliminar "${catalogoProductos[idx]}" del catálogo?`)) {
+                catalogoProductos.splice(idx, 1);
+                guardarEnNube();
+            }
+        };
+
+        function renderizarCatalogoProductos(contenedor) {
+            const box = document.createElement('div');
+            box.className = 'box-productos-catalogo';
+            box.innerHTML = `
+                <h3 style="color:#0284c7; margin-top:0;">📦 CATÁLOGO DE PRODUCTOS (${catalogoProductos.length} ítems)</h3>
+                
+                <div style="display:flex; gap:8px; margin-bottom:12px;">
+                    <input type="text" id="nuevoProductoNombre" class="input-nombre" placeholder="Nombre del nuevo producto..." style="font-size:12px;">
+                    <button class="btn-verde" onclick="agregarProductoCatalogo()">➕ Añadir al Catálogo</button>
+                </div>
+
+                <input type="text" class="buscador-caja" id="busc-catalogo" placeholder="🔍 Buscar producto en el catálogo..." oninput="filtrarTablaCatalogo()">
+                
+                <div style="max-height:450px; overflow-y:auto;">
+                    <table class="tabla-productos" id="tablaCatalogo">
+                        <thead>
+                            <tr>
+                                <th>Descripción del Producto</th>
+                                <th style="width:220px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${catalogoProductos.map((prod, idx) => `
+                                <tr>
+                                    <td>${prod}</td>
+                                    <td style="display:flex; gap:4px;">
+                                        <button class="btn-verde" style="padding:3px 6px; font-size:10px;" onclick="agregarProductoAlArmador('${prod.replace(/'/g, "\\'")}')">➕ Agregar</button>
+                                        <button class="btn-accion" style="padding:3px 6px; font-size:10px;" onclick="modificarProductoCatalogo(${idx})">✏️ Modificar</button>
+                                        <button class="btn-eliminar" style="padding:3px 6px; font-size:10px;" onclick="eliminarProductoCatalogo(${idx})">🗑️ Borrar</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            contenedor.appendChild(box);
+        }
+
+        window.filtrarTablaCatalogo = function() {
+            const query = normalizarTexto(document.getElementById('busc-catalogo').value);
+            const rows = document.querySelectorAll('#tablaCatalogo tbody tr');
+            rows.forEach(row => { row.style.display = normalizarTexto(row.cells[0].textContent).includes(query) ? '' : 'none'; });
+        };
+
+        window.agregarProductoAlArmador = function(nombreProd) {
+            const areaTexto = document.getElementById('textoPedido');
+            let esEmpaquetadoUnidad = /(gr|ml|lt|saq|pack|alfajor|barra|promo)/i.test(nombreProd);
+            let formatoAgregado = esEmpaquetadoUnidad ? `1 un - ${nombreProd}` : `1 kg ${nombreProd}`;
+            areaTexto.value = areaTexto.value.trim() ? areaTexto.value + `\n${formatoAgregado}` : formatoAgregado;
+            alert(`✅ Se agregó "${formatoAgregado}" al armador de pedidos.`);
+        };
+
+        // GESTIÓN DE CUENTAS (EXCLUSIVO PARA ADMINISTRADORES)
+        function renderizarGestionCuentas(contenedor) {
+            if (!usuarioSesionActiva || !usuarioSesionActiva.isAdmin) {
+                contenedor.innerHTML = `<p style="color:red; font-weight:bold;">Acceso denegado. Se requieren permisos de Administrador.</p>`;
+                return;
+            }
+
+            const box = document.createElement('div');
+            box.className = 'box-gestion-cuentas';
+            box.innerHTML = `
+                <h3 style="color:#d97706; margin-top:0;">⚙️ GESTIÓN DE CUENTAS DE USUARIOS</h3>
+                <p style="font-size:11px; color:#718096;">Edita el nombre de usuario o restablece la contraseña de cualquier cuenta registrada.</p>
+
+                <div style="max-height:450px; overflow-y:auto;">
+                    <table class="tabla-cuentas">
+                        <thead>
+                            <tr>
+                                <th>Usuario</th>
+                                <th>Sucursal</th>
+                                <th>Rol</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${chatUsuarios.map((u, idx) => `
+                                <tr>
+                                    <td><b>${u.user}</b></td>
+                                    <td>${u.sucursal}</td>
+                                    <td>${u.isAdmin ? '👑 Admin' : '👤 Usuario'}</td>
+                                    <td style="display:flex; gap:5px;">
+                                        <button class="btn-accion" style="padding:3px 8px; font-size:10px;" onclick="editarUsuarioCuenta(${idx})">✏️ Nombre</button>
+                                        <button class="btn-archivar" style="padding:3px 8px; font-size:10px;" onclick="editarPasswordCuenta(${idx})">🔑 Contraseña</button>
+                                        ${!u.isAdmin ? `<button class="btn-eliminar" style="padding:3px 8px; font-size:10px;" onclick="eliminarUsuarioCuenta(${idx})">🗑️</button>` : ''}
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            contenedor.appendChild(box);
+        }
+
+        window.editarUsuarioCuenta = function(idx) {
+            const u = chatUsuarios[idx];
+            const nuevoNombre = prompt("Nuevo nombre de usuario:", u.user);
+            if (nuevoNombre && nuevoNombre.trim() !== '') {
+                chatUsuarios[idx].user = nuevoNombre.trim();
+                guardarEnNube();
+                alert("Nombre de usuario actualizado.");
+            }
+        };
+
+        window.editarPasswordCuenta = function(idx) {
+            const u = chatUsuarios[idx];
+            const nuevaPass = prompt(`Nueva contraseña para ${u.user}:`, u.pass);
+            if (nuevaPass && nuevaPass.trim() !== '') {
+                chatUsuarios[idx].pass = nuevaPass.trim();
+                guardarEnNube();
+                alert("Contraseña actualizada correctamente.");
+            }
+        };
+
+        window.eliminarUsuarioCuenta = function(idx) {
+            if (confirm(`¿Eliminar la cuenta de ${chatUsuarios[idx].user}?`)) {
+                chatUsuarios.splice(idx, 1);
+                guardarEnNube();
+            }
+        };
+
+        // EMPLEADOS Y SUGERENCIAS
+        window.agregarEmpleado = function() {
+            const input = document.getElementById('nuevoEmpleado');
+            const nombre = input.value.trim();
+            if (nombre && !empleados.includes(nombre)) {
+                empleados.push(nombre); input.value = ''; guardarEnNube();
+            }
+        };
+
         window.eliminarEmpleado = function(nombre) {
-            empleados = empleados.filter(e => e !== nombre);
-            guardarEnNube();
+            empleados = empleados.filter(e => e !== nombre); guardarEnNube();
         };
 
         function renderizarEmpleados() {
@@ -577,11 +811,51 @@
             });
         }
 
-        // --- EXTRACCIÓN Y DETECCIÓN DE UNIDADES VS KG ---
+        window.agregarSugerenciaNotita = function() {
+            const txtArea = document.getElementById('txtNuevaSugerencia');
+            const texto = txtArea.value.trim();
+            if (texto) {
+                sugerenciasNotitas.push({ id: Date.now().toString(), texto: texto, fecha: new Date().toLocaleDateString('es-AR') });
+                txtArea.value = ''; guardarEnNube();
+            }
+        };
+
+        window.eliminarSugerenciaNotita = function(id) {
+            sugerenciasNotitas = sugerenciasNotitas.filter(s => s.id !== id); guardarEnNube();
+        };
+
+        window.editarSugerenciaNotita = function(id) {
+            const sug = sugerenciasNotitas.find(s => s.id === id);
+            if (sug) {
+                const nuevo = prompt("Editar sugerencia:", sug.texto);
+                if (nuevo) { sug.texto = nuevo.trim(); guardarEnNube(); }
+            }
+        };
+
+        function renderizarSugerenciasNotitas() {
+            const cont = document.getElementById('contenedorNotitasSugerencias');
+            if (!cont) return;
+            cont.innerHTML = '';
+            sugerenciasNotitas.forEach(s => {
+                const item = document.createElement('details');
+                item.className = 'notita-sugerencia-item';
+                item.innerHTML = `
+                    <summary style="cursor:pointer; font-weight:bold; font-size:11px; display:flex; justify-content:space-between; align-items:center;">
+                        <span>💡 Sugerencia (${s.fecha})</span>
+                        <div>
+                            <button class="btn-accion" style="padding:1px 4px; font-size:9px;" onclick="editarSugerenciaNotita('${s.id}')">✏️</button>
+                            <button class="btn-eliminar" style="padding:1px 4px; font-size:9px;" onclick="eliminarSugerenciaNotita('${s.id}')">🗑️</button>
+                        </div>
+                    </summary>
+                    <div style="font-size:11px; margin-top:4px; color:#4a5568;">${s.texto}</div>
+                `;
+                cont.appendChild(item);
+            });
+        }
+
         function extraerCantidadYNombre(cadena) {
             let txt = cadena.trim();
             let match = txt.match(/^([\d\/\.,\s]+(?:kg|kilos?|g|gr|gramos?|unid|unidades?|un|lt|litros?|pack|saq)?)\s*(?:de\s*)?(.*)$/i);
-            
             if (match) {
                 let cantStr = match[1].trim().toLowerCase();
                 let nombreProd = match[2].trim();
@@ -602,7 +876,11 @@
             return { nombre: txt, cantidad: 1, esUnidad: true };
         }
 
-        // --- PARSER INTELIGENTE AVANZADO ---
+        function extraerNombreSinCantidad(cadena) {
+            let parsed = extraerCantidadYNombre(cadena);
+            return parsed.nombre;
+        }
+
         function procesarTextoPedido(textoRaw) {
             let t = textoRaw.replace(/medio\s*1\/2/gi, '1/2').replace(/1\/2\s*medio/gi, '1/2');
             const patronSeparaSinComa = /([a-zA-Z"”\'])\s+(?=(?:\d+\s*(?:kg|kilos?|g|gr|unid|unidades?|un|lt|litros?|pack|saq)|medio\s*(?:kilo|kg)|1\/2\s*(?:kilo|kg)|\d+\s*kilo))\b/gi;
@@ -610,54 +888,19 @@
 
             let lineas = t.split(/[,\n]+/);
             let productosValidos = [];
-            let notasExtraidas = [];
-
-            const palabrasDescarte = [
-                'hola', 'buenas', 'tardes', 'dias', 'noches', 'voy a retirar', 'retirar por',
-                'retiro por', 'paso a buscar', 'gracias', 'cuanto seria', 'espero tu respuesta',
-                'me mandas', 'puedes enviar', 'queria hacer un pedido', 'quisiera hacer', 'necesito',
-                'mayorista', 'consumidor final', 'pagina', 'página', 'maipu', 'mendoza', 'chango mas', 'sucursal:'
-            ];
-
-            const clientesOBasuraSistema = ['alejandra santa coloma', 'luisina nicolino', 'pepepep', 'sucursal', 'cliente'];
-            const indicadoresNota = ['y si hay', 'si tienen', 'si te queda', 'en caso de tener', 'tambien', 'si hay'];
 
             lineas.forEach(linea => {
                 let txt = linea.trim();
                 let txtLower = normalizarTexto(txt);
                 if (!txt) return;
 
-                let esNota = indicadoresNota.some(ind => txtLower.includes(ind));
-                if (esNota) {
-                    notasExtraidas.push(txt);
-                    return;
-                }
-
-                let esEncabezadoOCliente = clientesOBasuraSistema.some(b => txtLower.includes(b));
-                if (esEncabezadoOCliente) return;
-
                 let tieneUnidad = /(\d+|1\/2|1\/4|medio|kg|kilo|gr|g|litro|lt|pack|unidades?)/i.test(txtLower);
-                let esBasura = palabrasDescarte.some(f => txtLower.startsWith(f) || txtLower === f);
-
-                if ((tieneUnidad || txt.length > 4) && !esBasura) {
-                    let textoLimpio = txt.replace(/\bkilos?\b/gi, 'kg');
-                    textoLimpio = analizarAmbiguos(textoLimpio);
-                    productosValidos.push(textoLimpio);
+                if (tieneUnidad || txt.length > 3) {
+                    productosValidos.push(txt.replace(/\bkilos?\b/gi, 'kg'));
                 }
             });
 
-            return { productos: productosValidos, notas: notasExtraidas.join(' - ') };
-        }
-
-        function analizarAmbiguos(textoItem) {
-            let txtLower = normalizarTexto(textoItem);
-            for (let pal of CATALOGO_AMBIGUO) {
-                const regex = new RegExp(`\\b${pal}\\b`, 'i');
-                if (regex.test(txtLower) && !txtLower.includes('marina') && !txtLower.includes('himalaya') && !txtLower.includes('tacc') && txtLower.split(' ').length <= 4) {
-                    return textoItem + ' (No aclara cuál)';
-                }
-            }
-            return textoItem;
+            return { productos: productosValidos };
         }
 
         window.crearPedido = function() {
@@ -671,70 +914,28 @@
             if (!textoRaw.trim()) { alert("Por favor, ingresa los productos del pedido."); return; }
 
             const resultado = procesarTextoPedido(textoRaw);
-            
-            let notaFinal = notaManual;
-            if (resultado.notas) {
-                notaFinal = notaFinal ? `${notaManual} | ${resultado.notas}` : resultado.notas;
-            }
-
             const now = new Date();
             const fechaFormateada = now.toLocaleDateString('es-AR') + ' ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' hs';
 
             const items = resultado.productos.map(prodText => ({
                 idItem: Date.now().toString() + Math.random().toString(36).substr(2, 4),
-                texto: prodText, 
-                marcado: false, 
-                nota: '', 
-                soloTengo: '',
-                reemplazo: '',
-                separaciones: []
+                texto: prodText, marcado: false, nota: '', soloTengo: '', reemplazo: '', separaciones: []
             }));
 
             if (items.length > 0) {
-                const nuevoPedido = {
-                    id: Date.now().toString(),
-                    nombre: nombre,
-                    sucursal: sucursal,
-                    tipoCliente: tipoCliente,
-                    descEfectivo: descEfectivo,
-                    notaGeneral: notaFinal,
-                    fechaCreacion: fechaFormateada,
-                    armador: '', 
-                    entregador: '',
-                    tickCompletado: false,
-                    tickEntregado: false,
-                    archivado: false,
-                    items: items,
-                    textoFaltantesGuardado: '',
-                    minimizado: false,
-                    remitoPdf: null
-                };
+                pedidos.push({
+                    id: Date.now().toString(), nombre, sucursal, tipoCliente, descEfectivo,
+                    notaGeneral: notaManual, fechaCreacion: fechaFormateada, armador: '', entregador: '',
+                    tickCompletado: false, tickEntregado: false, archivado: false, items, textoFaltantesGuardado: '', minimizado: false, remitoPdf: null
+                });
                 
-                pedidos.push(nuevoPedido);
                 guardarEnNube();
-
                 document.getElementById('nombrePedido').value = '';
                 document.getElementById('textoPedido').value = '';
                 document.getElementById('notaGeneralPedido').value = '';
                 document.getElementById('descEfectivoPedido').checked = false;
-            } else {
-                alert("No se detectaron productos válidos en el mensaje.");
             }
         };
-
-        function registrarFaltantesEnHistorial(pedido) {
-            pedido.items.filter(i => !i.marcado || (i.soloTengo && i.soloTengo.trim() !== '')).forEach(item => {
-                faltantesHistoricos.push({
-                    idPedido: pedido.id,
-                    cliente: pedido.nombre,
-                    sucursal: pedido.sucursal,
-                    texto: item.texto,
-                    soloTengo: item.soloTengo || '',
-                    fecha: pedido.fechaCreacion || new Date().toLocaleDateString('es-AR')
-                });
-            });
-            guardarEnNube();
-        }
 
         window.renderizarPedidos = function() {
             const contenedor = document.getElementById('contenedorPedidos');
@@ -743,32 +944,16 @@
 
             const queryBuscador = normalizarTexto(document.getElementById('buscadorPedidosInput').value);
 
-            if (sucursalActiva === 'FALTANTES_PEDIDOS') {
-                renderizarFaltantesDePedidosEspecificos(contenedor);
-                return;
-            }
-
-            if (sucursalActiva === 'FALTANTES_SUCURSAL') {
-                renderizarFaltantesPorSucursal(contenedor);
-                return;
-            }
-
-            if (sucursalActiva === 'FALTANTES_COMPARTIDOS') {
-                renderizarFaltantesCompartidos(contenedor);
-                return;
-            }
-
-            if (sucursalActiva === 'CATALOGO_PRODUCTOS') {
-                renderizarCatalogoProductos(contenedor);
-                return;
-            }
+            if (sucursalActiva === 'INICIO_HUB') return;
+            if (sucursalActiva === 'FALTANTES_PEDIDOS') { renderizarFaltantesDePedidosEspecificos(contenedor); return; }
+            if (sucursalActiva === 'FALTANTES_SUCURSAL') { renderizarFaltantesPorSucursal(contenedor); return; }
+            if (sucursalActiva === 'FALTANTES_COMPARTIDOS') { renderizarFaltantesCompartidos(contenedor); return; }
+            if (sucursalActiva === 'CATALOGO_PRODUCTOS') { renderizarCatalogoProductos(contenedor); return; }
+            if (sucursalActiva === 'GESTION_CUENTAS') { renderizarGestionCuentas(contenedor); return; }
 
             const pedidosFiltrados = pedidos.filter(p => {
                 const coincideNombre = normalizarTexto(p.nombre).includes(queryBuscador);
-
-                if (sucursalActiva === 'PEDIDOS_ARCHIVADOS') {
-                    return p.archivado === true && coincideNombre;
-                }
+                if (sucursalActiva === 'PEDIDOS_ARCHIVADOS') return p.archivado === true && coincideNombre;
                 if (p.archivado) return false;
                 if (sucursalActiva === 'Todos') return coincideNombre;
                 return p.sucursal === sucursalActiva && coincideNombre;
@@ -810,9 +995,7 @@
                 colArma.innerHTML = `<label>Armado por (*):</label>`;
                 const selectArma = document.createElement('select');
                 selectArma.innerHTML = `<option value="">-- Seleccionar --</option>`;
-                empleados.forEach(emp => {
-                    selectArma.innerHTML += `<option value="${emp}" ${pedido.armador === emp ? 'selected' : ''}>${emp}</option>`;
-                });
+                empleados.forEach(emp => { selectArma.innerHTML += `<option value="${emp}" ${pedido.armador === emp ? 'selected' : ''}>${emp}</option>`; });
                 selectArma.onchange = (e) => { pedido.armador = e.target.value; guardarEnNube(); };
                 colArma.appendChild(selectArma);
 
@@ -820,14 +1003,11 @@
                 colEntrega.innerHTML = `<label>Entregado por:</label>`;
                 const selectEntrega = document.createElement('select');
                 selectEntrega.innerHTML = `<option value="">-- Seleccionar --</option>`;
-                empleados.forEach(emp => {
-                    selectEntrega.innerHTML += `<option value="${emp}" ${pedido.entregador === emp ? 'selected' : ''}>${emp}</option>`;
-                });
+                empleados.forEach(emp => { selectEntrega.innerHTML += `<option value="${emp}" ${pedido.entregador === emp ? 'selected' : ''}>${emp}</option>`; });
                 selectEntrega.onchange = (e) => { pedido.entregador = e.target.value; guardarEnNube(); };
                 colEntrega.appendChild(selectEntrega);
 
-                divPersonal.appendChild(colArma);
-                divPersonal.appendChild(colEntrega);
+                divPersonal.appendChild(colArma); divPersonal.appendChild(colEntrega);
                 header.appendChild(divPersonal);
 
                 const divTicks = document.createElement('div');
@@ -835,15 +1015,6 @@
                 divTicks.innerHTML = `
                     <div class="estado-linea"><label><input type="checkbox" id="chk-comp-${pedido.id}" ${pedido.tickCompletado ? 'checked' : ''}> ✅ Completado</label></div>
                     <div class="estado-linea"><label><input type="checkbox" id="chk-entr-${pedido.id}" ${pedido.tickEntregado ? 'checked' : ''}> 📦 Entregado</label></div>
-                    <div class="remito-box">
-                        📄 <b>Remito PDF:</b>
-                        ${pedido.remitoPdf ? `
-                            <button class="btn-remito" onclick="verRemito('${pedido.id}')">Ver/Descargar</button>
-                            <button class="btn-eliminar" style="padding:2px 5px; font-size:10px;" onclick="eliminarRemito('${pedido.id}')">X</button>
-                        ` : `
-                            <label class="btn-remito" style="cursor:pointer;">Cargar PDF <input type="file" accept="application/pdf" onchange="cargarRemito('${pedido.id}', event)"></label>
-                        `}
-                    </div>
                 `;
                 
                 header.appendChild(divTicks);
@@ -852,7 +1023,6 @@
                 setTimeout(() => {
                     const elChkComp = document.getElementById(`chk-comp-${pedido.id}`);
                     const elChkEntr = document.getElementById(`chk-entr-${pedido.id}`);
-
                     if (elChkComp) {
                         elChkComp.onchange = (e) => {
                             if (e.target.checked && (!pedido.armador || pedido.armador.trim() === '')) {
@@ -861,19 +1031,11 @@
                                 return;
                             }
                             pedido.tickCompletado = e.target.checked;
-                            if (pedido.tickCompletado) {
-                                registrarFaltantesEnHistorial(pedido);
-                            } else {
-                                guardarEnNube();
-                            }
-                        };
-                    }
-
-                    if (elChkEntr) {
-                        elChkEntr.onchange = (e) => {
-                            pedido.tickEntregado = e.target.checked;
                             guardarEnNube();
                         };
+                    }
+                    if (elChkEntr) {
+                        elChkEntr.onchange = (e) => { pedido.tickEntregado = e.target.checked; guardarEnNube(); };
                     }
                 }, 0);
 
@@ -896,16 +1058,11 @@
                     li.className = `item-row ${item.marcado ? 'marcado' : ''}`;
                     
                     const check = document.createElement('input');
-                    check.type = 'checkbox';
-                    check.checked = item.marcado;
-                    check.onchange = (e) => {
-                        item.marcado = e.target.checked;
-                        guardarEnNube();
-                    };
+                    check.type = 'checkbox'; check.checked = item.marcado;
+                    check.onchange = (e) => { item.marcado = e.target.checked; guardarEnNube(); };
 
                     const spanText = document.createElement('span');
-                    spanText.className = 'item-texto';
-                    spanText.textContent = item.texto;
+                    spanText.className = 'item-texto'; spanText.textContent = item.texto;
 
                     const inputSoloTengo = document.createElement('input');
                     inputSoloTengo.type = 'text'; inputSoloTengo.className = 'item-parcial';
@@ -929,32 +1086,14 @@
 
                 body.appendChild(ul);
 
-                const itemsConSeparacion = pedido.items.filter(i => i.separaciones && i.separaciones.length > 0);
-                if (itemsConSeparacion.length > 0) {
-                    const divSepara = document.createElement('div');
-                    divSepara.className = 'seccion-separa';
-                    divSepara.innerHTML = `<h4>Separan otras sucursales:</h4>`;
-                    const ulSepara = document.createElement('ul');
-                    itemsConSeparacion.forEach(i => {
-                        i.separaciones.forEach(sep => {
-                            ulSepara.innerHTML += `<li><b>${i.texto}</b> → <u>${sep.sucursal}</u> separa: <b>${sep.cantidad}</b></li>`;
-                        });
-                    });
-                    divSepara.appendChild(ulSepara);
-                    body.appendChild(divSepara);
-                }
-
                 const divFaltantes = document.createElement('div');
                 divFaltantes.className = 'seccion-faltantes';
                 divFaltantes.innerHTML = `
                     <label>
                         <span>FALTANTES Y REEMPLAZOS:</span>
-                        <div>
-                            <button type="button" class="btn-accion" style="padding:2px 5px; font-size:10px;" onclick="copiarTextoArea('faltantes-${pedido.id}')">📋 Copiar</button>
-                            <button type="button" style="border:none; background:transparent; cursor:pointer; font-size:14px;" onclick="habilitarEdicionFaltantes('${pedido.id}')">✏️</button>
-                        </div>
+                        <button type="button" class="btn-accion" style="padding:2px 5px; font-size:10px;" onclick="copiarTextoArea('faltantes-${pedido.id}')">📋 Copiar</button>
                     </label>
-                    <textarea class="caja-faltantes" id="faltantes-${pedido.id}" readonly onchange="guardarTextoFaltantes('${pedido.id}', this.value)">${pedido.textoFaltantesGuardado || ''}</textarea>
+                    <textarea class="caja-faltantes" id="faltantes-${pedido.id}" onchange="guardarTextoFaltantes('${pedido.id}', this.value)">${pedido.textoFaltantesGuardado || ''}</textarea>
                     <button class="btn-accion" style="width:100%; background:#2e7d32; font-size:12px; padding:5px;" onclick="generarFaltantes('${pedido.id}')">Recopilar Faltantes</button>
                 `;
                 
@@ -966,50 +1105,20 @@
 
         window.toggleArchivar = function(id) {
             const pedido = pedidos.find(p => p.id === id);
-            if (pedido) {
-                pedido.archivado = !pedido.archivado;
-                guardarEnNube();
-            }
+            if (pedido) { pedido.archivado = !pedido.archivado; guardarEnNube(); }
         };
 
-        // --- CONSOLIDACIÓN DE FALTANTES POR SUCURSAL ---
         function renderizarFaltantesPorSucursal(contenedor) {
-            let acumFaltantes = { 'Maipu': {}, 'Mendoza': {}, 'Chango Mas': {} };
+            let faltantesSet = { 'Maipu': new Set(), 'Mendoza': new Set(), 'Chango Mas': new Set() };
 
-            let listaFuentes = [];
-            pedidos.filter(p => p.tickCompletado).forEach(p => {
-                p.items.filter(i => !i.marcado || (i.soloTengo && i.soloTengo.trim() !== '')).forEach(item => {
-                    listaFuentes.push({ sucursal: p.sucursal, texto: item.texto });
-                });
-            });
-
-            faltantesHistoricos.forEach(h => {
-                listaFuentes.push({ sucursal: h.sucursal, texto: h.texto });
-            });
-
-            listaFuentes.forEach(elem => {
-                let parsed = extraerCantidadYNombre(elem.texto);
-                let clave = normalizarTexto(parsed.nombre);
-
-                if (!acumFaltantes[elem.sucursal][clave]) {
-                    acumFaltantes[elem.sucursal][clave] = { nombre: parsed.nombre, totalCantidad: 0, esUnidad: parsed.esUnidad };
-                }
-                acumFaltantes[elem.sucursal][clave].totalCantidad += parsed.cantidad;
-            });
-
-            function generarTextoConsolidado(sucursal) {
-                let lineas = [];
-                Object.values(acumFaltantes[sucursal]).forEach(obj => {
-                    let cantText = "";
-                    if (obj.esUnidad) {
-                        cantText = `${Math.ceil(obj.totalCantidad)} un`;
-                    } else {
-                        cantText = obj.totalCantidad >= 1 ? `${obj.totalCantidad}kg` : `${obj.totalCantidad * 1000}g`;
+            pedidos.forEach(p => {
+                p.items.forEach(i => {
+                    if (!i.marcado) {
+                        let nombreLimpio = extraerNombreSinCantidad(i.texto);
+                        faltantesSet[p.sucursal].add(nombreLimpio);
                     }
-                    lineas.push(`- ${cantText} ${obj.nombre}`);
                 });
-                return lineas.join('\n');
-            }
+            });
 
             const grid = document.createElement('div');
             grid.className = 'contenedor-faltantes-grid';
@@ -1017,240 +1126,96 @@
                 <div class="box-faltantes-sucursal maipu">
                     <h3>🟢 Faltantes Maipú <button class="btn-accion" onclick="copiarTextoArea('txt-f-maipu')">📋 Copiar</button></h3>
                     <input type="text" class="buscador-caja" id="busc-maipu" placeholder="🔍 Buscar en Maipú..." oninput="filtrarCajaFaltante('txt-f-maipu', 'busc-maipu')">
-                    <textarea class="area-copia-faltantes" id="txt-f-maipu" data-original="${generarTextoConsolidado('Maipu')}" readonly>${generarTextoConsolidado('Maipu') || 'Sin faltantes acumulados.'}</textarea>
+                    <textarea class="area-copia-faltantes" id="txt-f-maipu" data-original="${Array.from(faltantesSet['Maipu']).map(x => '- ' + x).join('\n')}" onchange="guardarFaltanteTextoManual('maipu', this.value)">${faltantesEspecialesGuardados.maipu || Array.from(faltantesSet['Maipu']).map(x => '- ' + x).join('\n') || 'Sin faltantes.'}</textarea>
                 </div>
                 <div class="box-faltantes-sucursal mendoza">
                     <h3>🟠 Faltantes Mendoza <button class="btn-accion" onclick="copiarTextoArea('txt-f-mendoza')">📋 Copiar</button></h3>
                     <input type="text" class="buscador-caja" id="busc-mendoza" placeholder="🔍 Buscar en Mendoza..." oninput="filtrarCajaFaltante('txt-f-mendoza', 'busc-mendoza')">
-                    <textarea class="area-copia-faltantes" id="txt-f-mendoza" data-original="${generarTextoConsolidado('Mendoza')}" readonly>${generarTextoConsolidado('Mendoza') || 'Sin faltantes acumulados.'}</textarea>
+                    <textarea class="area-copia-faltantes" id="txt-f-mendoza" data-original="${Array.from(faltantesSet['Mendoza']).map(x => '- ' + x).join('\n')}" onchange="guardarFaltanteTextoManual('mendoza', this.value)">${faltantesEspecialesGuardados.mendoza || Array.from(faltantesSet['Mendoza']).map(x => '- ' + x).join('\n') || 'Sin faltantes.'}</textarea>
                 </div>
                 <div class="box-faltantes-sucursal chango">
                     <h3>🟡 Faltantes Chango Mas <button class="btn-accion" onclick="copiarTextoArea('txt-f-chango')">📋 Copiar</button></h3>
                     <input type="text" class="buscador-caja" id="busc-chango" placeholder="🔍 Buscar en Chango Mas..." oninput="filtrarCajaFaltante('txt-f-chango', 'busc-chango')">
-                    <textarea class="area-copia-faltantes" id="txt-f-chango" data-original="${generarTextoConsolidado('Chango Mas')}" readonly>${generarTextoConsolidado('Chango Mas') || 'Sin faltantes acumulados.'}</textarea>
+                    <textarea class="area-copia-faltantes" id="txt-f-chango" data-original="${Array.from(faltantesSet['Chango Mas']).map(x => '- ' + x).join('\n')}" onchange="guardarFaltanteTextoManual('chango', this.value)">${faltantesEspecialesGuardados.chango || Array.from(faltantesSet['Chango Mas']).map(x => '- ' + x).join('\n') || 'Sin faltantes.'}</textarea>
                 </div>
             `;
             contenedor.appendChild(grid);
         }
 
-        // --- FALTANTES GENERALES COMPARTIDOS ---
         function renderizarFaltantesCompartidos(contenedor) {
-            let acumGlobal = {};
+            let concurrenciaFaltante = {};
 
-            let listaFuentes = [];
-            pedidos.filter(p => p.tickCompletado).forEach(p => {
-                p.items.filter(i => !i.marcado || (i.soloTengo && i.soloTengo.trim() !== '')).forEach(item => {
-                    listaFuentes.push({ sucursal: p.sucursal, texto: item.texto });
+            pedidos.forEach(p => {
+                p.items.forEach(i => {
+                    let nombreLimpio = normalizarTexto(extraerNombreSinCantidad(i.texto));
+                    if (!concurrenciaFaltante[nombreLimpio]) {
+                        concurrenciaFaltante[nombreLimpio] = { nombreOriginal: extraerNombreSinCantidad(i.texto), sucursalesFalta: new Set() };
+                    }
+                    if (!i.marcado) {
+                        concurrenciaFaltante[nombreLimpio].sucursalesFalta.add(p.sucursal);
+                    }
                 });
             });
 
-            faltantesHistoricos.forEach(h => {
-                listaFuentes.push({ sucursal: h.sucursal, texto: h.texto });
-            });
-
-            listaFuentes.forEach(elem => {
-                let parsed = extraerCantidadYNombre(elem.texto);
-                let clave = normalizarTexto(parsed.nombre);
-
-                if (!acumGlobal[clave]) {
-                    acumGlobal[clave] = { nombre: parsed.nombre, totalCantidad: 0, sucursales: new Set(), esUnidad: parsed.esUnidad };
+            let listaGlobalLimpia = [];
+            Object.values(concurrenciaFaltante).forEach(obj => {
+                if (obj.sucursalesFalta.size >= 2) {
+                    listaGlobalLimpia.push(`- ${obj.nombreOriginal}`);
                 }
-                acumGlobal[clave].totalCantidad += parsed.cantidad;
-                acumGlobal[clave].sucursales.add(elem.sucursal);
-            });
-
-            let list = [];
-            Object.values(acumGlobal).forEach(obj => {
-                let sucs = Array.from(obj.sucursales);
-                let cantText = obj.esUnidad ? `${Math.ceil(obj.totalCantidad)} un` : (obj.totalCantidad >= 1 ? `${obj.totalCantidad}kg` : `${obj.totalCantidad * 1000}g`);
-                let detalleSucs = sucs.length === 3 ? "Falta en las 3 sucursales" : `Falta en: ${sucs.join(', ')}`;
-                list.push(`- ${cantText} ${obj.nombre} (${detalleSucs})`);
             });
 
             const grid = document.createElement('div');
             grid.className = 'contenedor-faltantes-grid';
             grid.innerHTML = `
                 <div class="box-faltantes-sucursal general" style="grid-column: 1 / -1;">
-                    <h3>🔴 FALTANTES GENERALES COMPARTIDOS ACUMULADOS PERSISTENTES <button class="btn-accion" onclick="copiarTextoArea('txt-f-gen')">📋 Copiar</button></h3>
+                    <h3>🔴 FALTANTES GENERALES COMPARTIDOS <button class="btn-accion" onclick="copiarTextoArea('txt-f-gen')">📋 Copiar</button></h3>
                     <input type="text" class="buscador-caja" id="busc-gen" placeholder="🔍 Buscar en faltantes generales..." oninput="filtrarCajaFaltante('txt-f-gen', 'busc-gen')">
-                    <textarea class="area-copia-faltantes" id="txt-f-gen" style="height:220px;" data-original="${list.join('\n')}" readonly>${list.join('\n') || 'No hay faltantes acumulados.'}</textarea>
+                    <textarea class="area-copia-faltantes" id="txt-f-gen" style="height:220px;" data-original="${listaGlobalLimpia.join('\n')}" onchange="guardarFaltanteTextoManual('general', this.value)">${faltantesEspecialesGuardados.general || listaGlobalLimpia.join('\n') || 'No hay faltantes compartidos.'}</textarea>
                 </div>
             `;
             contenedor.appendChild(grid);
         }
 
+        window.guardarFaltanteTextoManual = function(tipo, valor) {
+            faltantesEspecialesGuardados[tipo] = valor;
+            guardarEnNube();
+        };
+
         window.filtrarCajaFaltante = function(idTextarea, idBuscador) {
             const area = document.getElementById(idTextarea);
             const busq = normalizarTexto(document.getElementById(idBuscador).value);
             const lineasOriginales = (area.getAttribute('data-original') || '').split('\n');
-
-            if (!busq) {
-                area.value = area.getAttribute('data-original');
-                return;
-            }
-
+            if (!busq) { area.value = area.getAttribute('data-original'); return; }
             const filtradas = lineasOriginales.filter(linea => normalizarTexto(linea).includes(busq));
             area.value = filtradas.join('\n') || 'Sin coincidencias.';
         };
 
-        // --- TARJETAS INTERACTIVAS DE FALTANTES ---
         function renderizarFaltantesDePedidosEspecificos(contenedor) {
             let hayFaltantes = false;
-
             pedidos.forEach(pedido => {
                 if (pedido.tickCompletado && !pedido.archivado) {
                     const faltantesDelPedido = pedido.items.filter(i => !i.marcado || (i.soloTengo && i.soloTengo.trim() !== ''));
-
                     if (faltantesDelPedido.length > 0) {
                         hayFaltantes = true;
-
                         const divPostIt = document.createElement('div');
-                        divPostIt.className = 'post-it';
-                        divPostIt.style.borderLeft = '5px solid #e65100';
-
-                        divPostIt.innerHTML = `
-                            <div class="post-it-header" style="background:#fff3e0;">
-                                <h3 style="color:#e65100;">${pedido.nombre} <span>📍 Origen: ${pedido.sucursal}</span></h3>
-                            </div>
-                        `;
-
-                        const body = document.createElement('div');
-                        body.className = 'post-it-body';
-
+                        divPostIt.className = 'post-it'; divPostIt.style.borderLeft = '5px solid #e65100';
+                        divPostIt.innerHTML = `<div class="post-it-header" style="background:#fff3e0;"><h3 style="color:#e65100;">${pedido.nombre} <span>📍 Origen: ${pedido.sucursal}</span></h3></div>`;
+                        const body = document.createElement('div'); body.className = 'post-it-body';
                         faltantesDelPedido.forEach(item => {
-                            const card = document.createElement('div');
-                            card.className = 'card-faltante-item';
-
-                            card.innerHTML = `
-                                <div style="font-size:12px; font-weight:bold; color:#2d3748;">- ${item.texto}</div>
-                                <div class="card-faltante-row">
-                                    <span>Asignar separación:</span>
-                                    <select id="suc-sep-${item.idItem}">
-                                        <option value="Maipu">Maipu</option>
-                                        <option value="Mendoza">Mendoza</option>
-                                        <option value="Chango Mas">Chango Mas</option>
-                                    </select>
-                                    <input type="text" id="cant-sep-${item.idItem}" placeholder="Cant. (500g)">
-                                    <button class="btn-verde" style="padding:2px 6px; font-size:10px;" onclick="agregarSeparacionMulti('${pedido.id}', '${item.idItem}')">➕</button>
-                                </div>
-                            `;
-
-                            if (item.separaciones && item.separaciones.length > 0) {
-                                const ulS = document.createElement('ul');
-                                ulS.style.cssText = 'margin:4px 0 0 0; padding-left:15px; font-size:10px; color:#2e7d32;';
-                                item.separaciones.forEach((s, idx) => {
-                                    ulS.innerHTML += `<li>${s.sucursal} separa <b>${s.cantidad}</b> <span style="color:red; cursor:pointer;" onclick="quitarSeparacionMulti('${pedido.id}', '${item.idItem}', ${idx})">❌</span></li>`;
-                                });
-                                card.appendChild(ulS);
-                            }
-
+                            const card = document.createElement('div'); card.className = 'card-faltante-item';
+                            card.innerHTML = `<div style="font-size:12px; font-weight:bold; color:#2d3748;">- ${item.texto}</div>`;
                             body.appendChild(card);
                         });
-
-                        divPostIt.appendChild(body);
-                        contenedor.appendChild(divPostIt);
+                        divPostIt.appendChild(body); contenedor.appendChild(divPostIt);
                     }
                 }
             });
-
-            if (!hayFaltantes) {
-                contenedor.innerHTML = `<p style="color: #2e7d32; font-weight: bold; width: 100%;">🎉 No hay faltantes en los pedidos completados activos.</p>`;
-            }
+            if (!hayFaltantes) contenedor.innerHTML = `<p style="color: #2e7d32; font-weight: bold; width: 100%;">🎉 No hay faltantes en los pedidos completados activos.</p>`;
         }
-
-        // --- CATÁLOGO DE PRODUCTOS ---
-        function renderizarCatalogoProductos(contenedor) {
-            const box = document.createElement('div');
-            box.className = 'box-productos-catalogo';
-            box.innerHTML = `
-                <h3 style="color:#0284c7; margin-top:0;">📦 CATÁLOGO DE PRODUCTOS VITTA (${CATALOGO_PRODUCTOS_EXCEL.length} ítems)</h3>
-                <input type="text" class="buscador-caja" id="busc-catalogo" placeholder="🔍 Buscar producto en el catálogo..." oninput="filtrarTablaCatalogo()">
-                <div style="max-height:450px; overflow-y:auto;">
-                    <table class="tabla-productos" id="tablaCatalogo">
-                        <thead>
-                            <tr>
-                                <th>Descripción del Producto</th>
-                                <th style="width:120px;">Acción</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${CATALOGO_PRODUCTOS_EXCEL.map((prod) => `
-                                <tr>
-                                    <td>${prod}</td>
-                                    <td><button class="btn-verde" style="padding:3px 8px; font-size:10px;" onclick="agregarProductoAlArmador('${prod.replace(/'/g, "\\'")}')">➕ Agregar</button></td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-            contenedor.appendChild(box);
-        }
-
-        window.filtrarTablaCatalogo = function() {
-            const query = normalizarTexto(document.getElementById('busc-catalogo').value);
-            const rows = document.querySelectorAll('#tablaCatalogo tbody tr');
-
-            rows.forEach(row => {
-                const text = normalizarTexto(row.cells[0].textContent);
-                row.style.display = text.includes(query) ? '' : 'none';
-            });
-        };
-
-        window.agregarProductoAlArmador = function(nombreProd) {
-            const areaTexto = document.getElementById('textoPedido');
-            let esEmpaquetadoUnidad = /(gr|ml|lt|saq|pack|alfajor|barra|promo)/i.test(nombreProd);
-            let formatoAgregado = esEmpaquetadoUnidad ? `1 un - ${nombreProd}` : `1 kg ${nombreProd}`;
-
-            if (areaTexto.value.trim()) {
-                areaTexto.value += `\n${formatoAgregado}`;
-            } else {
-                areaTexto.value = formatoAgregado;
-            }
-            alert(`✅ Se agregó "${formatoAgregado}" al armador de pedidos.`);
-        };
-
-        // --- SEPARACIONES Y HERRAMIENTAS ---
-        window.agregarSeparacionMulti = function(idPedido, idItem) {
-            const suc = document.getElementById(`suc-sep-${idItem}`).value;
-            const cant = document.getElementById(`cant-sep-${idItem}`).value.trim();
-
-            if (!cant) { alert("Ingresa la cantidad que separa esta sucursal (Ej: 500g)."); return; }
-
-            const pedido = pedidos.find(p => p.id === idPedido);
-            if (pedido) {
-                const item = pedido.items.find(i => i.idItem === idItem);
-                if (item) {
-                    if (!item.separaciones) item.separaciones = [];
-                    item.separaciones.push({ sucursal: suc, cantidad: cant });
-                    guardarEnNube();
-                }
-            }
-        };
-
-        window.quitarSeparacionMulti = function(idPedido, idItem, index) {
-            const pedido = pedidos.find(p => p.id === idPedido);
-            if (pedido) {
-                const item = pedido.items.find(i => i.idItem === idItem);
-                if (item && item.separaciones) {
-                    item.separaciones.splice(index, 1);
-                    guardarEnNube();
-                }
-            }
-        };
 
         window.copiarTextoArea = function(idArea) {
             const area = document.getElementById(idArea);
-            if (area && area.value) {
-                area.select();
-                navigator.clipboard.writeText(area.value);
-                alert("📋 ¡Copiado al portapapeles!");
-            }
-        };
-
-        window.habilitarEdicionFaltantes = function(idPedido) {
-            const area = document.getElementById(`faltantes-${idPedido}`);
-            if (area) { area.removeAttribute('readonly'); area.focus(); }
+            if (area && area.value) { area.select(); navigator.clipboard.writeText(area.value); alert("📋 ¡Copiado al portapapeles!"); }
         };
 
         window.guardarTextoFaltantes = function(idPedido, valor) {
@@ -1258,86 +1223,13 @@
             if (pedido) { pedido.textoFaltantesGuardado = valor; guardarEnNube(); }
         };
 
-        window.cargarRemito = function(idPedido, event) {
-            const file = event.target.files[0];
-            if (file && file.type === 'application/pdf') {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const pedido = pedidos.find(p => p.id === idPedido);
-                    if (pedido) { pedido.remitoPdf = e.target.result; guardarEnNube(); }
-                };
-                reader.readAsDataURL(file);
-            }
-        };
-
-        window.verRemito = function(idPedido) {
-            const pedido = pedidos.find(p => p.id === idPedido);
-            if (pedido && pedido.remitoPdf) {
-                const win = window.open();
-                win.document.write(`<iframe src="${pedido.remitoPdf}" frameborder="0" style="border:0; top:0; left:0; width:100%; height:100%;" allowfullscreen></iframe>`);
-            }
-        };
-
-        window.eliminarRemito = function(idPedido) {
-            if (confirm("¿Deseas quitar el remito?")) {
-                const pedido = pedidos.find(p => p.id === idPedido);
-                if (pedido) { pedido.remitoPdf = null; guardarEnNube(); }
-            }
-        };
-
-        // --- CHAT GLOBAL Y SESIONES ---
-        window.cambiarSesionChat = function(numSesion) {
-            sesionChatActiva = numSesion;
-            document.getElementById('tabChat1').classList.toggle('activo', numSesion === 1);
-            document.getElementById('tabChat2').classList.toggle('activo', numSesion === 2);
-            initChatUI();
-            renderizarPedidos();
-        };
-
-        function initChatUI() {
-            const currUser = getUsuarioChatActual();
-            const sessionBox = document.getElementById('chatSessionBox');
-            if (!sessionBox) return;
-
-            if (currUser) {
-                document.getElementById('chatAuthBox').style.display = 'none';
-                sessionBox.style.display = 'flex';
-                document.getElementById('chatUserDisplay').textContent = `${currUser.user} (${currUser.sucursal}) ${currUser.isAdmin ? '👑 ADMIN' : ''}`;
-                renderizarMensajesChat();
-            } else {
-                document.getElementById('chatAuthBox').style.display = 'block';
-                sessionBox.style.display = 'none';
-            }
-        }
-
-        window.registrarUsuarioChat = function() {
-            const u = document.getElementById('regUser').value.trim();
-            const p = document.getElementById('regPass').value.trim();
-            const s = document.getElementById('regSucursal').value;
-            if (!u || !p) return;
-            if (chatUsuarios.find(x => x.user.toLowerCase() === u.toLowerCase())) { alert("Usuario existente."); return; }
-            chatUsuarios.push({ user: u, pass: p, sucursal: s, isAdmin: false });
-            guardarEnNube();
-            alert("Cuenta creada.");
-        };
-
-        window.loginChat = function() {
-            const u = document.getElementById('loginUser').value.trim();
-            const p = document.getElementById('loginPass').value.trim();
-            const userFound = chatUsuarios.find(x => x.user.toLowerCase() === u.toLowerCase() && x.pass === p);
-            if (userFound) { setUsuarioChatActual(userFound); initChatUI(); }
-            else { alert("Credenciales incorrectas."); }
-        };
-
-        window.logoutChat = function() { setUsuarioChatActual(null); initChatUI(); };
-
+        // CHAT GLOBAL
         window.enviarMensajeChat = function() {
             const txtInput = document.getElementById('chatInputMsg');
             const texto = txtInput.value.trim();
-            const currUser = getUsuarioChatActual();
-            if (texto && currUser) {
+            if (texto && usuarioSesionActiva) {
                 chatMensajes.push({
-                    id: Date.now().toString(), user: currUser.user, sucursal: currUser.sucursal,
+                    id: Date.now().toString(), user: usuarioSesionActiva.user, sucursal: usuarioSesionActiva.sucursal,
                     texto: texto, fecha: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                 });
                 guardarEnNube(); 
@@ -1353,8 +1245,7 @@
                 const div = document.createElement('div');
                 div.className = 'msg-item';
                 let classTag = msg.sucursal === 'Mendoza' ? 'tag-mendoza' : (msg.sucursal === 'Chango Mas' ? 'tag-chango' : 'tag-maipu');
-                let currUser = getUsuarioChatActual();
-                let acciones = (currUser && currUser.isAdmin) ? `<span class="msg-actions" onclick="editarMsgChat('${msg.id}')">✏️</span><span class="msg-actions" onclick="borrarMsgChat('${msg.id}')">🗑️</span>` : '';
+                let acciones = (usuarioSesionActiva && usuarioSesionActiva.isAdmin) ? `<span class="msg-actions" onclick="borrarMsgChat('${msg.id}')">🗑️</span>` : '';
                 div.innerHTML = `<span class="tag-suc ${classTag}">(${msg.sucursal})</span><b>${msg.user}:</b> ${msg.texto} <span style="font-size:8px; color:#a0aec0;">${msg.fecha}</span>${acciones}`;
                 box.appendChild(div);
             });
@@ -1362,10 +1253,6 @@
         }
 
         window.borrarMsgChat = function(idMsg) { chatMensajes = chatMensajes.filter(m => m.id !== idMsg); guardarEnNube(); };
-        window.editarMsgChat = function(idMsg) {
-            const m = chatMensajes.find(m => m.id === idMsg);
-            if (m) { const t = prompt("Editar:", m.texto); if (t) { m.texto = t.trim(); guardarEnNube(); } }
-        };
 
         window.toggleMinimizar = function(id) {
             const pedido = pedidos.find(p => p.id === id);
@@ -1393,13 +1280,6 @@
                 guardarEnNube();
             }
         };
-
-        // Sugerencias locales
-        const txtSug = document.getElementById('txtSugerencia');
-        if (txtSug) {
-            txtSug.value = localStorage.getItem('sugerenciaGuardada') || '';
-            txtSug.oninput = (e) => localStorage.setItem('sugerenciaGuardada', e.target.value);
-        }
     </script>
 </body>
 </html>
