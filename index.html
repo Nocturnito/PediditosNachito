@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestor de Pedidos - Pro v3.0</title>
+    <title>Gestor de Pedidos - Pro v3.2</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -47,7 +47,30 @@
         .btn-filtro.btn-productos-tab { background-color: #e0f2fe; color: #0369a1; border-color: #bae6fd; }
         .btn-filtro.btn-productos-tab.activo { background-color: #0284c7; color: white; border-color: #0284c7; }
 
-        /* LAYOUT PRINCIPAL */
+        /* BUSCADOR GENERAL DE PEDIDOS */
+        .barra-buscador-pedidos {
+            width: 100%;
+            margin-bottom: 15px;
+            background: white;
+            padding: 10px 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid #e2e8f0;
+        }
+        .input-buscador-pedidos {
+            flex: 1;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e0;
+            font-size: 13px;
+            outline: none;
+        }
+        .input-buscador-pedidos:focus { border-color: #2e7d32; box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.2); }
+
+        /* LAYOUT PRINCIPAL RESPONSIVE */
         .main-layout {
             display: flex;
             gap: 15px;
@@ -84,7 +107,7 @@
             padding: 12px 15px; border: 1px solid #e2e8f0;
         }
 
-        .formulario-details { border-top: 4px solid #f57c00; flex: 2; min-width: 320px; }
+        .formulario-details { border-top: 4px solid #f57c00; flex: 2; min-width: 280px; }
         .panel-empleados-details { border-top: 4px solid #2e7d32; flex: 1; min-width: 240px; }
 
         .formulario-details summary, .panel-empleados-details summary {
@@ -99,7 +122,7 @@
         .tag-empleado { background: #e8f5e9; padding: 3px 8px; border-radius: 12px; font-size: 12px; display: flex; align-items: center; gap: 5px; color: #2e7d32; font-weight: 600; }
         .tag-empleado span { cursor: pointer; color: #d32f2f; font-weight: bold; }
 
-        /* CHAT GLOBAL REDIMENSIONABLE */
+        /* CHAT GLOBAL REDIMENSIONABLE Y DESPLEGABLES DERECHOS */
         .panel-chat-details {
             background: white; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
             border-top: 4px solid #2b6cb0; border: 1px solid #e2e8f0; padding: 10px;
@@ -133,13 +156,21 @@
         .tag-chango { background-color: #f57f17; }
         .msg-actions { font-size: 10px; color: #718096; cursor: pointer; margin-left: 4px; }
 
-        /* NOTAS DE ACTUALIZACIONES (MOSTRANDO 10 EDICIONES) */
+        /* PESTAÑA DESPLEGABLE DE SUGERENCIAS */
+        .panel-sugerencias-details {
+            background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px;
+            padding: 10px 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid #16a34a;
+        }
+        .panel-sugerencias-details summary { font-weight: bold; color: #15803d; cursor: pointer; font-size: 13px; }
+        .caja-sugerencia { width: 100%; height: 70px; font-size: 11px; padding: 6px; border: 1px solid #cbd5e0; border-radius: 6px; margin-top: 6px; resize: vertical; }
+
+        /* NOTAS DE ACTUALIZACIONES */
         .actualizaciones {
             background-color: #fffde7; border: 1px solid #ffe082; border-radius: 12px;
             padding: 10px 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid #fbc02d;
         }
         .actualizaciones summary { font-weight: bold; color: #f57f17; cursor: pointer; font-size: 13px; }
-        .actualizaciones ul { font-size: 11px; color: #4a5568; margin-top: 6px; padding-left: 15px; line-height: 1.3; max-height: 280px; overflow-y: auto; }
+        .actualizaciones ul { font-size: 11px; color: #4a5568; margin-top: 6px; padding-left: 15px; line-height: 1.3; max-height: 250px; overflow-y: auto; }
         .actualizaciones li { margin-bottom: 6px; }
         .version-badge { background: #f57f17; color: white; padding: 1px 4px; border-radius: 3px; font-size: 9px; font-weight: bold; margin-right: 3px; }
         .creador-firma { font-size: 11px; color: #718096; text-align: right; margin-top: 4px; font-style: italic; font-weight: bold; }
@@ -178,6 +209,7 @@
         
         .badge-tipo-cliente { font-size: 10px; font-weight: bold; padding: 1px 5px; border-radius: 3px; background: #e2e8f0; color: #2d3748; margin-left: 4px; }
         .badge-efectivo { font-size: 10px; font-weight: bold; padding: 1px 5px; border-radius: 3px; background: #c8e6c9; color: #1b5e20; margin-left: 4px; }
+        .badge-fecha { font-size: 10px; color: #718096; font-weight: bold; display: block; margin-top: 2px; }
 
         .personal-row { display: flex; gap: 8px; font-size: 11px; margin-bottom: 6px; color: #4a5568; }
         .personal-row div { flex: 1; display: flex; flex-direction: column; gap: 1px; }
@@ -249,6 +281,17 @@
         }
         .tabla-productos th { background: #f0f9ff; color: #0369a1; font-weight: bold; }
         .tabla-productos tr:hover { background: #f8fafc; }
+
+        /* REGLAS PARA PANTALLAS MÓVILES (SMARTPHONES) */
+        @media (max-width: 850px) {
+            body { padding: 8px; }
+            .main-layout { flex-direction: column; }
+            .right-col { width: 100%; }
+            .post-it { width: 100%; }
+            .filtros-sucursal { justify-content: center; }
+            .btn-filtro { font-size: 11px; padding: 5px 9px; }
+            .panel-chat-details { width: 100% !important; resize: vertical; }
+        }
     </style>
 </head>
 <body>
@@ -265,6 +308,12 @@
         <button class="btn-filtro btn-faltantes-tab" onclick="filtrarSucursal('FALTANTES_SUCURSAL', this)">📊 FALTANTES POR SUCURSAL</button>
         <button class="btn-filtro btn-compartidos-tab" onclick="filtrarSucursal('FALTANTES_COMPARTIDOS', this)">🔴 FALTANTES GENERALES (COMPARTIDOS)</button>
         <button class="btn-filtro btn-productos-tab" onclick="filtrarSucursal('CATALOGO_PRODUCTOS', this)">📦 CATÁLOGO DE PRODUCTOS</button>
+    </div>
+
+    <!-- BUSCADOR FLEXIBLE DE PEDIDOS POR NOMBRE Y FECHA -->
+    <div class="barra-buscador-pedidos" id="boxBuscadorPedidos">
+        <span>🔍 <b>Buscar cliente:</b></span>
+        <input type="text" id="buscadorPedidosInput" class="input-buscador-pedidos" placeholder="Escribe el nombre del cliente..." oninput="renderizarPedidos()">
     </div>
 
     <!-- LAYOUT PRINCIPAL -->
@@ -316,7 +365,7 @@
 
         <!-- COLUMNA DERECHA -->
         <div class="right-col">
-            <!-- CHAT GLOBAL -->
+            <!-- CHAT GLOBAL REDIMENSIONABLE -->
             <details class="panel-chat-details" open>
                 <summary>💬 CHAT GLOBAL (Ajustable ⇲)</summary>
                 
@@ -359,27 +408,33 @@
                 </div>
             </details>
 
-            <!-- NOTAS DE ACTUALIZACIONES (ÚLTIMAS 10) -->
+            <!-- PESTAÑA DESPLEGABLE DE SUGERENCIAS -->
+            <details class="panel-sugerencias-details" open>
+                <summary>💡 SUGERENCIAS DE MEJORA</summary>
+                <textarea class="caja-sugerencia" id="txtSugerencia" placeholder="Escribe aquí ideas o sugerencias..." oninput="guardarSugerencia(this.value)"></textarea>
+            </details>
+
+            <!-- NOTAS DE ACTUALIZACIONES -->
             <div class="actualizaciones-container">
                 <details class="actualizaciones" open>
                     <summary>📣 NOTAS DE ACTUALIZACIONES (Últimas 10)</summary>
                     <ul>
-                        <li><span class="version-badge">v3.0</span> <b>Desbloqueo Total & Botones Visibles:</b>
+                        <li><span class="version-badge">v3.2</span> <b>Parser Inteligente Sin Comas & Responsive:</b>
                             <ul>
-                                <li>Desbloqueo general de checkboxes, selectores e inputs sin requerir chat.</li>
-                                <li>Restauración visible de los botones 📂 Archivar y 🗑️ Eliminar por pedido.</li>
-                                <li>Historial completo de las últimas 10 actualizaciones visible en scroll.</li>
+                                <li>Detección automática de renglones aunque falten comas entre productos.</li>
+                                <li>Pestaña desplegable de sugerencias añadida en el panel derecho.</li>
+                                <li>Chat redimensionable verticalmente e interfaz adaptada a móviles.</li>
                             </ul>
                         </li>
-                        <li><span class="version-badge">v2.9</span> <b>Pedidos Archivados & Anti-Basura:</b> Módulo de archivado de pedidos y filtro mejorado de texto copiado.</li>
-                        <li><span class="version-badge">v2.8</span> <b>Faltantes Históricos Persistentes:</b> Acumulación ininterrumpida de faltantes aunque se borren pedidos.</li>
-                        <li><span class="version-badge">v2.7</span> <b>Acumulación de Cantidades:</b> Agrupado de kilos y unidades duplicadas entre clientes (ej: 10kg + 10kg = 20kg).</li>
-                        <li><span class="version-badge">v2.6</span> <b>Visualización de Remitos PDF:</b> Carga y vista integrada de remitos adjuntos por cliente.</li>
-                        <li><span class="version-badge">v2.5</span> <b>Asignación Multi-Sucursal:</b> Separación de faltantes por sucursal responsable.</li>
-                        <li><span class="version-badge">v2.4</span> <b>Faltantes Compartidos Generales:</b> Vista unificada global de stock faltante.</li>
-                        <li><span class="version-badge">v2.3</span> <b>Detección de Ambiguos:</b> Alerta automática en ítems imprecisos (ej: "yerba", "sal").</li>
-                        <li><span class="version-badge">v2.2</span> <b>Soporte Multi-Sesión en Chat:</b> Gestión independiente de cuentas por pestaña de chat.</li>
-                        <li><span class="version-badge">v2.1</span> <b>Optimización de Interfaz:</b> Rediseño fluido de post-its con soporte para notas rápidas.</li>
+                        <li><span class="version-badge">v3.1</span> <b>Fechas & Buscador Flexible:</b> Registro automático de fechas y búsqueda tolerant.</li>
+                        <li><span class="version-badge">v3.0</span> <b>Desbloqueo Total:</b> Edición libre sin bloqueo de inputs.</li>
+                        <li><span class="version-badge">v2.9</span> <b>Archivado de Pedidos:</b> Módulo para almacenar pedidos procesados.</li>
+                        <li><span class="version-badge">v2.8</span> <b>Faltantes Persistentes:</b> Acumulado continuo de productos faltantes.</li>
+                        <li><span class="version-badge">v2.7</span> <b>Suma de Cantidades:</b> Consolidación de kilos y unidades.</li>
+                        <li><span class="version-badge">v2.6</span> <b>Carga de Remitos:</b> Adjuntos PDF por cliente.</li>
+                        <li><span class="version-badge">v2.5</span> <b>Multi-Sucursal:</b> Separación de ítems por local.</li>
+                        <li><span class="version-badge">v2.4</span> <b>Faltantes Compartidos:</b> Stock global faltante.</li>
+                        <li><span class="version-badge">v2.3</span> <b>Detección Ambiguos:</b> Alerta automática en ítems imprecisos.</li>
                     </ul>
                 </details>
                 <div class="creador-firma">Creado por : Nazareno Martinez</div>
@@ -391,7 +446,7 @@
         const CATALOGO_AMBIGUO = ['sal', 'yerba', 'aceite', 'alfajor', 'harina', 'fideo', 'leche', 'té', 'te', 'miel', 'azucar', 'semillas', 'arroz', 'avena'];
 
         // BASE COMPLETA DE 1,013 PRODUCTOS EXTRAÍDOS DEL EXCEL
-        const CATALOGO_PRODUCTOS_EXCEL = ["PROMO PAN KAUFER", "Alfajor CHOCOLEIT negro 0% AZUCAR SIN TACC", "Alfajor CELIENERGY Avellana B SIN TACC", "Yerba AJEDREZ PREMIUM CANCHADA 500 gr", "Barra MUECAS Manz Arand 45 gr", "Alfajor CHOCOLEIT blanco 0% AZUCAR SIN TACC", "EdulKONY 200 ml", "Harina de coco CUMANA 200 gr", "Leche Avena Italiana AMANDE 1 Lt", "Premezc. PAN con Psyillum Husk DICOMERE 450 gr SIN TACC", "Alfajor CELIENERGY Nuez SIN TACC", "Pistacho Natural SIN CASC CUMANA 150 gr", "Cereza Marrasquino CUMANA Fr. 200 gr", "Fideo SOYARROZ C Angel 300 gr", "Pistacho Con Cascara CUMANA 150 gr", "Gallet. PEPAS DIA VITA 150 gr SIN TACC", "Snack Garbanzo Ahumado CROYDON 60 gr", "Gallet. MARLBORO Avena Coco Pasas 200 gr", "Te CHAI TISSAN Sembras 20 saq", "Aceite de Coco VIRGEN GODBLESS 500 cc", "Granola CRUNCHY Frutos Secos 500 gr", "Nuez Mariposa Extra Blanca 1 kg", "Tutuca Dulce Especial 1 kg", "Masitas Pepas Membrillo 1 kg", "Masitas Palitos Integrales 1 kg", "Fécula de Mandioca Especial 1 kg"];
+        const CATALOGO_PRODUCTOS_EXCEL = ["PROMO PAN KAUFER", "Alfajor CHOCOLEIT negro 0% AZUCAR SIN TACC", "Alfajor CELIENERGY Avellana B SIN TACC", "Yerba AJEDREZ PREMIUM CANCHADA 500 gr", "Barra MUECAS Manz Arand 45 gr", "Alfajor CHOCOLEIT blanco 0% AZUCAR SIN TACC", "EdulKONY 200 ml", "Harina de coco CUMANA 200 gr", "Leche Avena Italiana AMANDE 1 Lt", "Premezc. PAN con Psyillum Husk DICOMERE 450 gr SIN TACC", "Alfajor CELIENERGY Nuez SIN TACC", "Pistacho Natural SIN CASC CUMANA 150 gr", "Cereza Marrasquino CUMANA Fr. 200 gr", "Fideo SOYARROZ C Angel 300 gr", "Pistacho Con Cascara CUMANA 150 gr", "Tostadas de arroz DON MARCOS 120gr sin sal", "Miel ORGANICA CRUDA YUNGA ANDINA 330 gr", "Te Alcachofa H DEL OASIS 25 s", "Aceite de coco neutro COSACO 360 ml", "Fideos integrales MATILDE 400 gr GLUTEN", "Gallet. PEPAS DIA VITA 150 gr SIN TACC", "Snack Garbanzo Ahumado CROYDON 60 gr", "Gallet. MARLBORO Avena Coco Pasas 200 gr", "Te CHAI TISSAN Sembras 20 saq", "Aceite de Coco VIRGEN GODBLESS 500 cc", "Granola CRUNCHY Frutos Secos 500 gr", "Nuez Mariposa Extra Blanca 1 kg", "Tutuca Dulce Especial 1 kg", "Masitas Pepas Membrillo 1 kg", "Masitas Palitos Integrales 1 kg", "Fécula de Mandioca Especial 1 kg"];
 
         let pedidos = JSON.parse(localStorage.getItem('pedidosGuardados')) || [];
         let empleados = JSON.parse(localStorage.getItem('empleadosGuardados')) || ['Juan', 'Maria', 'Carlos'];
@@ -413,6 +468,13 @@
         renderizarPedidos();
         initChatUI();
 
+        // Cargar Sugerencias
+        document.getElementById('txtSugerencia').value = localStorage.getItem('sugerenciaGuardada') || '';
+
+        function guardarSugerencia(val) {
+            localStorage.setItem('sugerenciaGuardada', val);
+        }
+
         function guardarEnMemoria() {
             localStorage.setItem('pedidosGuardados', JSON.stringify(pedidos));
             localStorage.setItem('empleadosGuardados', JSON.stringify(empleados));
@@ -421,6 +483,11 @@
             localStorage.setItem('chatUsuariosGuardados', JSON.stringify(chatUsuarios));
             localStorage.setItem('chatUsuarioSesion1', JSON.stringify(usuarioSesion1));
             localStorage.setItem('chatUsuarioSesion2', JSON.stringify(usuarioSesion2));
+        }
+
+        function normalizarTexto(txt) {
+            if (!txt) return '';
+            return txt.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
         }
 
         function getUsuarioChatActual() {
@@ -440,10 +507,17 @@
             botonElemento.classList.add('activo');
 
             const formTop = document.getElementById('bloqueFormularios');
-            if (sucursal.startsWith('FALTANTES') || sucursal === 'CATALOGO_PRODUCTOS' || sucursal === 'PEDIDOS_ARCHIVADOS') {
+            const boxBusqueda = document.getElementById('boxBuscadorPedidos');
+
+            if (sucursal.startsWith('FALTANTES') || sucursal === 'CATALOGO_PRODUCTOS') {
                 formTop.style.display = 'none';
+                boxBusqueda.style.display = 'none';
+            } else if (sucursal === 'PEDIDOS_ARCHIVADOS') {
+                formTop.style.display = 'none';
+                boxBusqueda.style.display = 'flex';
             } else {
                 formTop.style.display = 'flex';
+                boxBusqueda.style.display = 'flex';
             }
 
             renderizarPedidos();
@@ -505,9 +579,17 @@
             return { nombre: txt, cantidad: 1, esUnidad: true };
         }
 
-        // --- PARSER INTELIGENTE ANTI-BASURA ---
+        // --- PARSER INTELIGENTE AVANZADO CON SEPARACIÓN AUTOMÁTICA DE PRODUCTOS ---
         function procesarTextoPedido(textoRaw) {
-            let lineas = textoRaw.split(/[,\n]+/);
+            // 1. Corregir expresiones pegadas tipo "medio1/2" o "1/2medio"
+            let t = textoRaw.replace(/medio\s*1\/2/gi, '1/2').replace(/1\/2\s*medio/gi, '1/2');
+            
+            // 2. Insertar comas automáticas antes de nuevos productos cuando el cliente no puso comas
+            // Ejemplo: 'chocolate "colonial" 1 kg de nuez' -> 'chocolate "colonial", 1 kg de nuez'
+            const patronSeparaSinComa = /([a-zA-Z"”\'])\s+(?=(?:\d+\s*(?:kg|kilos?|g|gr|unid|unidades?|un|lt|litros?|pack|saq)|medio\s*(?:kilo|kg)|1\/2\s*(?:kilo|kg)|\d+\s*kilo))\b/gi;
+            t = t.replace(patronSeparaSinComa, '$1, ');
+
+            let lineas = t.split(/[,\n]+/);
             let productosValidos = [];
             let notasExtraidas = [];
 
@@ -526,7 +608,7 @@
 
             lineas.forEach(linea => {
                 let txt = linea.trim();
-                let txtLower = txt.toLowerCase();
+                let txtLower = normalizarTexto(txt);
                 if (!txt) return;
 
                 let esNota = indicadoresNota.some(ind => txtLower.includes(ind));
@@ -542,7 +624,7 @@
                 let esBasura = palabrasDescarte.some(f => txtLower.startsWith(f) || txtLower === f);
 
                 if ((tieneUnidad || txt.length > 4) && !esBasura) {
-                    let textoLimpio = txt.replace(/medio\s*1\/2/gi, '1/2').replace(/1\/2\s*medio/gi, '1/2').replace(/\bkilos?\b/gi, 'kg');
+                    let textoLimpio = txt.replace(/\bkilos?\b/gi, 'kg');
                     textoLimpio = analizarAmbiguos(textoLimpio);
                     productosValidos.push(textoLimpio);
                 }
@@ -552,7 +634,7 @@
         }
 
         function analizarAmbiguos(textoItem) {
-            let txtLower = textoItem.toLowerCase();
+            let txtLower = normalizarTexto(textoItem);
             for (let pal of CATALOGO_AMBIGUO) {
                 const regex = new RegExp(`\\b${pal}\\b`, 'i');
                 if (regex.test(txtLower) && !txtLower.includes('marina') && !txtLower.includes('himalaya') && !txtLower.includes('tacc') && txtLower.split(' ').length <= 4) {
@@ -579,6 +661,9 @@
                 notaFinal = notaFinal ? `${notaManual} | ${resultado.notas}` : resultado.notas;
             }
 
+            const now = new Date();
+            const fechaFormateada = now.toLocaleDateString('es-AR') + ' ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' hs';
+
             const items = resultado.productos.map(prodText => ({
                 idItem: Date.now().toString() + Math.random().toString(36).substr(2, 4),
                 texto: prodText, 
@@ -597,6 +682,7 @@
                     tipoCliente: tipoCliente,
                     descEfectivo: descEfectivo,
                     notaGeneral: notaFinal,
+                    fechaCreacion: fechaFormateada,
                     armador: '', 
                     entregador: '',
                     tickCompletado: false,
@@ -629,7 +715,7 @@
                     sucursal: pedido.sucursal,
                     texto: item.texto,
                     soloTengo: item.soloTengo || '',
-                    fecha: new Date().toLocaleDateString('es-AR')
+                    fecha: pedido.fechaCreacion || new Date().toLocaleDateString('es-AR')
                 });
             });
             guardarEnMemoria();
@@ -638,6 +724,8 @@
         function renderizarPedidos() {
             const contenedor = document.getElementById('contenedorPedidos');
             contenedor.innerHTML = ''; 
+
+            const queryBuscador = normalizarTexto(document.getElementById('buscadorPedidosInput').value);
 
             if (sucursalActiva === 'FALTANTES_PEDIDOS') {
                 renderizarFaltantesDePedidosEspecificos(contenedor);
@@ -660,16 +748,18 @@
             }
 
             const pedidosFiltrados = pedidos.filter(p => {
+                const coincideNombre = normalizarTexto(p.nombre).includes(queryBuscador);
+
                 if (sucursalActiva === 'PEDIDOS_ARCHIVADOS') {
-                    return p.archivado === true;
+                    return p.archivado === true && coincideNombre;
                 }
                 if (p.archivado) return false;
-                if (sucursalActiva === 'Todos') return true;
-                return p.sucursal === sucursalActiva;
+                if (sucursalActiva === 'Todos') return coincideNombre;
+                return p.sucursal === sucursalActiva && coincideNombre;
             });
 
             if (pedidosFiltrados.length === 0) {
-                contenedor.innerHTML = `<p style="color: #718096; font-style: italic; width: 100%;">No hay pedidos para mostrar en esta vista.</p>`;
+                contenedor.innerHTML = `<p style="color: #718096; font-style: italic; width: 100%;">No se encontraron pedidos en esta vista.</p>`;
                 return;
             }
 
@@ -687,6 +777,7 @@
                             <span class="badge-tipo-cliente">${pedido.tipoCliente || 'Consumidor Final'}</span>
                             ${pedido.descEfectivo ? `<span class="badge-efectivo">💵 Desc. Efectivo</span>` : ''}
                             <span style="font-size:11px; color:#e65100; font-weight:600; display:block; margin-top:2px;">📍 Sucursal: ${pedido.sucursal}</span>
+                            <span class="badge-fecha">📅 ${pedido.fechaCreacion || 'S/F'}</span>
                         </h3>
                         <div style="display:flex; gap:3px;">
                             <button class="btn-accion" onclick="toggleMinimizar('${pedido.id}')">${pedido.minimizado ? '🔽' : '🔼'}</button>
@@ -876,7 +967,7 @@
 
             listaFuentes.forEach(elem => {
                 let parsed = extraerCantidadYNombre(elem.texto);
-                let clave = parsed.nombre.toLowerCase().trim();
+                let clave = normalizarTexto(parsed.nombre);
 
                 if (!acumFaltantes[elem.sucursal][clave]) {
                     acumFaltantes[elem.sucursal][clave] = { nombre: parsed.nombre, totalCantidad: 0, esUnidad: parsed.esUnidad };
@@ -937,7 +1028,7 @@
 
             listaFuentes.forEach(elem => {
                 let parsed = extraerCantidadYNombre(elem.texto);
-                let clave = parsed.nombre.toLowerCase().trim();
+                let clave = normalizarTexto(parsed.nombre);
 
                 if (!acumGlobal[clave]) {
                     acumGlobal[clave] = { nombre: parsed.nombre, totalCantidad: 0, sucursales: new Set(), esUnidad: parsed.esUnidad };
@@ -968,7 +1059,7 @@
 
         function filtrarCajaFaltante(idTextarea, idBuscador) {
             const area = document.getElementById(idTextarea);
-            const busq = document.getElementById(idBuscador).value.toLowerCase().trim();
+            const busq = normalizarTexto(document.getElementById(idBuscador).value);
             const lineasOriginales = (area.getAttribute('data-original') || '').split('\n');
 
             if (!busq) {
@@ -976,7 +1067,7 @@
                 return;
             }
 
-            const filtradas = lineasOriginales.filter(linea => linea.toLowerCase().includes(busq));
+            const filtradas = lineasOriginales.filter(linea => normalizarTexto(linea).includes(busq));
             area.value = filtradas.join('\n') || 'Sin coincidencias.';
         }
 
@@ -1075,11 +1166,11 @@
         }
 
         function filtrarTablaCatalogo() {
-            const query = document.getElementById('busc-catalogo').value.toLowerCase().trim();
+            const query = normalizarTexto(document.getElementById('busc-catalogo').value);
             const rows = document.querySelectorAll('#tablaCatalogo tbody tr');
 
             rows.forEach(row => {
-                const text = row.cells[0].textContent.toLowerCase();
+                const text = normalizarTexto(row.cells[0].textContent);
                 row.style.display = text.includes(query) ? '' : 'none';
             });
         }
