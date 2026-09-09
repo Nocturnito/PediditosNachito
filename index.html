@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestor de Pedidos - Pro v3.2</title>
+    <title>Gestor de Pedidos - Pro v3.2 (Nube)</title>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -419,9 +419,9 @@
                 <details class="actualizaciones" open>
                     <summary>📣 NOTAS DE ACTUALIZACIONES (Últimas 10)</summary>
                     <ul>
-                        <li><span class="version-badge">v3.2</span> <b>Parser Inteligente Sin Comas & Responsive:</b>
+                        <li><span class="version-badge">v3.2</span> <b>Sincronización en la Nube con Firebase:</b>
                             <ul>
-                                <li>Detección automática de renglones aunque falten comas entre productos.</li>
+                                <li>Los pedidos y cambios se comparten en tiempo real entre todos los usuarios.</li>
                                 <li>Pestaña desplegable de sugerencias añadida en el panel derecho.</li>
                                 <li>Chat redimensionable verticalmente e interfaz adaptada a móviles.</li>
                             </ul>
@@ -442,47 +442,69 @@
         </div>
     </div>
 
-    <script>
-        const CATALOGO_AMBIGUO = ['sal', 'yerba', 'aceite', 'alfajor', 'harina', 'fideo', 'leche', 'té', 'te', 'miel', 'azucar', 'semillas', 'arroz', 'avena'];
+    <!-- SDKs de Firebase Modular -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-        // BASE COMPLETA DE 1,013 PRODUCTOS EXTRAÍDOS DEL EXCEL
+        // Configuración de tu proyecto Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyC6BSUn8vxBEs3cSgMGUzYBjXiA8tcf0Co",
+            authDomain: "pediditos-by-nacho.firebaseapp.com",
+            databaseURL: "https://pediditos-by-nacho-default-rtdb.firebaseio.com",
+            projectId: "pediditos-by-nacho",
+            storageBucket: "pediditos-by-nacho.firebasestorage.app",
+            messagingSenderId: "629716370668",
+            appId: "1:629716370668:web:c91a57bdcd3a63e8f791c9",
+            measurementId: "G-GNQ2H9DS7K"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // Constantes del Catálogo
+        const CATALOGO_AMBIGUO = ['sal', 'yerba', 'aceite', 'alfajor', 'harina', 'fideo', 'leche', 'té', 'te', 'miel', 'azucar', 'semillas', 'arroz', 'avena'];
         const CATALOGO_PRODUCTOS_EXCEL = ["PROMO PAN KAUFER", "Alfajor CHOCOLEIT negro 0% AZUCAR SIN TACC", "Alfajor CELIENERGY Avellana B SIN TACC", "Yerba AJEDREZ PREMIUM CANCHADA 500 gr", "Barra MUECAS Manz Arand 45 gr", "Alfajor CHOCOLEIT blanco 0% AZUCAR SIN TACC", "EdulKONY 200 ml", "Harina de coco CUMANA 200 gr", "Leche Avena Italiana AMANDE 1 Lt", "Premezc. PAN con Psyillum Husk DICOMERE 450 gr SIN TACC", "Alfajor CELIENERGY Nuez SIN TACC", "Pistacho Natural SIN CASC CUMANA 150 gr", "Cereza Marrasquino CUMANA Fr. 200 gr", "Fideo SOYARROZ C Angel 300 gr", "Pistacho Con Cascara CUMANA 150 gr", "Tostadas de arroz DON MARCOS 120gr sin sal", "Miel ORGANICA CRUDA YUNGA ANDINA 330 gr", "Te Alcachofa H DEL OASIS 25 s", "Aceite de coco neutro COSACO 360 ml", "Fideos integrales MATILDE 400 gr GLUTEN", "Gallet. PEPAS DIA VITA 150 gr SIN TACC", "Snack Garbanzo Ahumado CROYDON 60 gr", "Gallet. MARLBORO Avena Coco Pasas 200 gr", "Te CHAI TISSAN Sembras 20 saq", "Aceite de Coco VIRGEN GODBLESS 500 cc", "Granola CRUNCHY Frutos Secos 500 gr", "Nuez Mariposa Extra Blanca 1 kg", "Tutuca Dulce Especial 1 kg", "Masitas Pepas Membrillo 1 kg", "Masitas Palitos Integrales 1 kg", "Fécula de Mandioca Especial 1 kg"];
 
-        let pedidos = JSON.parse(localStorage.getItem('pedidosGuardados')) || [];
-        let empleados = JSON.parse(localStorage.getItem('empleadosGuardados')) || ['Juan', 'Maria', 'Carlos'];
-        let chatMensajes = JSON.parse(localStorage.getItem('chatMensajesGuardados')) || [];
-        let faltantesHistoricos = JSON.parse(localStorage.getItem('faltantesHistoricosGuardados')) || [];
-        
-        let chatUsuarios = JSON.parse(localStorage.getItem('chatUsuariosGuardados')) || [
+        // Variables Globales
+        let pedidos = [];
+        let empleados = ['Juan', 'Maria', 'Carlos'];
+        let chatMensajes = [];
+        let faltantesHistoricos = [];
+        let chatUsuarios = [
             { user: 'Admin Fabri', pass: '2222', sucursal: 'Mendoza', isAdmin: true },
             { user: 'Admin Nacho', pass: '2222', sucursal: 'Maipu', isAdmin: true }
         ];
-        
+
         let sesionChatActiva = 1;
         let usuarioSesion1 = JSON.parse(localStorage.getItem('chatUsuarioSesion1')) || null;
         let usuarioSesion2 = JSON.parse(localStorage.getItem('chatUsuarioSesion2')) || null;
-
         let sucursalActiva = 'Todos';
 
-        renderizarEmpleados();
-        renderizarPedidos();
-        initChatUI();
+        // --- CONEXIÓN EN TIEMPO REAL CON FIREBASE ---
+        onValue(ref(db, 'appData'), (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                pedidos = data.pedidos || [];
+                empleados = data.empleados || ['Juan', 'Maria', 'Carlos'];
+                chatMensajes = data.chatMensajes || [];
+                faltantesHistoricos = data.faltantesHistoricos || [];
+                chatUsuarios = data.chatUsuarios || chatUsuarios;
 
-        // Cargar Sugerencias
-        document.getElementById('txtSugerencia').value = localStorage.getItem('sugerenciaGuardada') || '';
+                renderizarEmpleados();
+                renderizarPedidos();
+                initChatUI();
+            }
+        });
 
-        function guardarSugerencia(val) {
-            localStorage.setItem('sugerenciaGuardada', val);
-        }
-
-        function guardarEnMemoria() {
-            localStorage.setItem('pedidosGuardados', JSON.stringify(pedidos));
-            localStorage.setItem('empleadosGuardados', JSON.stringify(empleados));
-            localStorage.setItem('chatMensajesGuardados', JSON.stringify(chatMensajes));
-            localStorage.setItem('faltantesHistoricosGuardados', JSON.stringify(faltantesHistoricos));
-            localStorage.setItem('chatUsuariosGuardados', JSON.stringify(chatUsuarios));
-            localStorage.setItem('chatUsuarioSesion1', JSON.stringify(usuarioSesion1));
-            localStorage.setItem('chatUsuarioSesion2', JSON.stringify(usuarioSesion2));
+        function guardarEnNube() {
+            set(ref(db, 'appData'), {
+                pedidos: pedidos,
+                empleados: empleados,
+                chatMensajes: chatMensajes,
+                faltantesHistoricos: faltantesHistoricos,
+                chatUsuarios: chatUsuarios
+            });
         }
 
         function normalizarTexto(txt) {
@@ -495,13 +517,17 @@
         }
 
         function setUsuarioChatActual(usr) {
-            if (sesionChatActiva === 1) usuarioSesion1 = usr;
-            else usuarioSesion2 = usr;
-            guardarEnMemoria();
+            if (sesionChatActiva === 1) {
+                usuarioSesion1 = usr;
+                localStorage.setItem('chatUsuarioSesion1', JSON.stringify(usr));
+            } else {
+                usuarioSesion2 = usr;
+                localStorage.setItem('chatUsuarioSesion2', JSON.stringify(usr));
+            }
             renderizarPedidos();
         }
 
-        function filtrarSucursal(sucursal, botonElemento) {
+        window.filtrarSucursal = function(sucursal, botonElemento) {
             sucursalActiva = sucursal;
             document.querySelectorAll('.btn-filtro').forEach(btn => btn.classList.remove('activo'));
             botonElemento.classList.add('activo');
@@ -521,30 +547,27 @@
             }
 
             renderizarPedidos();
-        }
+        };
 
         // --- EMPLEADOS ---
-        function agregarEmpleado() {
+        window.agregarEmpleado = function() {
             const input = document.getElementById('nuevoEmpleado');
             const nombre = input.value.trim();
             if (nombre && !empleados.includes(nombre)) {
                 empleados.push(nombre);
                 input.value = '';
-                guardarEnMemoria();
-                renderizarEmpleados();
-                renderizarPedidos();
+                guardarEnNube();
             }
-        }
+        };
 
-        function eliminarEmpleado(nombre) {
+        window.eliminarEmpleado = function(nombre) {
             empleados = empleados.filter(e => e !== nombre);
-            guardarEnMemoria();
-            renderizarEmpleados();
-            renderizarPedidos();
-        }
+            guardarEnNube();
+        };
 
         function renderizarEmpleados() {
             const contenedor = document.getElementById('listaEmpleadosTags');
+            if (!contenedor) return;
             contenedor.innerHTML = '';
             empleados.forEach(emp => {
                 const tag = document.createElement('div');
@@ -579,13 +602,9 @@
             return { nombre: txt, cantidad: 1, esUnidad: true };
         }
 
-        // --- PARSER INTELIGENTE AVANZADO CON SEPARACIÓN AUTOMÁTICA DE PRODUCTOS ---
+        // --- PARSER INTELIGENTE AVANZADO ---
         function procesarTextoPedido(textoRaw) {
-            // 1. Corregir expresiones pegadas tipo "medio1/2" o "1/2medio"
             let t = textoRaw.replace(/medio\s*1\/2/gi, '1/2').replace(/1\/2\s*medio/gi, '1/2');
-            
-            // 2. Insertar comas automáticas antes de nuevos productos cuando el cliente no puso comas
-            // Ejemplo: 'chocolate "colonial" 1 kg de nuez' -> 'chocolate "colonial", 1 kg de nuez'
             const patronSeparaSinComa = /([a-zA-Z"”\'])\s+(?=(?:\d+\s*(?:kg|kilos?|g|gr|unid|unidades?|un|lt|litros?|pack|saq)|medio\s*(?:kilo|kg)|1\/2\s*(?:kilo|kg)|\d+\s*kilo))\b/gi;
             t = t.replace(patronSeparaSinComa, '$1, ');
 
@@ -600,10 +619,7 @@
                 'mayorista', 'consumidor final', 'pagina', 'página', 'maipu', 'mendoza', 'chango mas', 'sucursal:'
             ];
 
-            const clientesOBasuraSistema = [
-                'alejandra santa coloma', 'luisina nicolino', 'pepepep', 'sucursal', 'cliente'
-            ];
-
+            const clientesOBasuraSistema = ['alejandra santa coloma', 'luisina nicolino', 'pepepep', 'sucursal', 'cliente'];
             const indicadoresNota = ['y si hay', 'si tienen', 'si te queda', 'en caso de tener', 'tambien', 'si hay'];
 
             lineas.forEach(linea => {
@@ -644,7 +660,7 @@
             return textoItem;
         }
 
-        function crearPedido() {
+        window.crearPedido = function() {
             const nombre = document.getElementById('nombrePedido').value.trim() || 'Sin Nombre';
             const sucursal = document.getElementById('sucursalPedido').value;
             const tipoCliente = document.getElementById('tipoClientePedido').value;
@@ -695,8 +711,7 @@
                 };
                 
                 pedidos.push(nuevoPedido);
-                guardarEnMemoria();
-                renderizarPedidos();
+                guardarEnNube();
 
                 document.getElementById('nombrePedido').value = '';
                 document.getElementById('textoPedido').value = '';
@@ -705,7 +720,7 @@
             } else {
                 alert("No se detectaron productos válidos en el mensaje.");
             }
-        }
+        };
 
         function registrarFaltantesEnHistorial(pedido) {
             pedido.items.filter(i => !i.marcado || (i.soloTengo && i.soloTengo.trim() !== '')).forEach(item => {
@@ -718,11 +733,12 @@
                     fecha: pedido.fechaCreacion || new Date().toLocaleDateString('es-AR')
                 });
             });
-            guardarEnMemoria();
+            guardarEnNube();
         }
 
-        function renderizarPedidos() {
+        window.renderizarPedidos = function() {
             const contenedor = document.getElementById('contenedorPedidos');
+            if (!contenedor) return;
             contenedor.innerHTML = ''; 
 
             const queryBuscador = normalizarTexto(document.getElementById('buscadorPedidosInput').value);
@@ -797,7 +813,7 @@
                 empleados.forEach(emp => {
                     selectArma.innerHTML += `<option value="${emp}" ${pedido.armador === emp ? 'selected' : ''}>${emp}</option>`;
                 });
-                selectArma.onchange = (e) => { pedido.armador = e.target.value; guardarEnMemoria(); };
+                selectArma.onchange = (e) => { pedido.armador = e.target.value; guardarEnNube(); };
                 colArma.appendChild(selectArma);
 
                 const colEntrega = document.createElement('div');
@@ -807,7 +823,7 @@
                 empleados.forEach(emp => {
                     selectEntrega.innerHTML += `<option value="${emp}" ${pedido.entregador === emp ? 'selected' : ''}>${emp}</option>`;
                 });
-                selectEntrega.onchange = (e) => { pedido.entregador = e.target.value; guardarEnMemoria(); };
+                selectEntrega.onchange = (e) => { pedido.entregador = e.target.value; guardarEnNube(); };
                 colEntrega.appendChild(selectEntrega);
 
                 divPersonal.appendChild(colArma);
@@ -834,22 +850,31 @@
                 divPostIt.appendChild(header);
 
                 setTimeout(() => {
-                    document.getElementById(`chk-comp-${pedido.id}`).onchange = (e) => {
-                        if (e.target.checked && (!pedido.armador || pedido.armador.trim() === '')) {
-                            alert("⚠️ Debes seleccionar primero el empleado que lo empaquetó ('Armado por').");
-                            e.target.checked = false;
-                            return;
-                        }
-                        pedido.tickCompletado = e.target.checked;
-                        if (pedido.tickCompletado) {
-                            registrarFaltantesEnHistorial(pedido);
-                        }
-                        guardarEnMemoria();
-                    };
-                    document.getElementById(`chk-entr-${pedido.id}`).onchange = (e) => {
-                        pedido.tickEntregado = e.target.checked;
-                        guardarEnMemoria();
-                    };
+                    const elChkComp = document.getElementById(`chk-comp-${pedido.id}`);
+                    const elChkEntr = document.getElementById(`chk-entr-${pedido.id}`);
+
+                    if (elChkComp) {
+                        elChkComp.onchange = (e) => {
+                            if (e.target.checked && (!pedido.armador || pedido.armador.trim() === '')) {
+                                alert("⚠️ Debes seleccionar primero el empleado que lo empaquetó ('Armado por').");
+                                e.target.checked = false;
+                                return;
+                            }
+                            pedido.tickCompletado = e.target.checked;
+                            if (pedido.tickCompletado) {
+                                registrarFaltantesEnHistorial(pedido);
+                            } else {
+                                guardarEnNube();
+                            }
+                        };
+                    }
+
+                    if (elChkEntr) {
+                        elChkEntr.onchange = (e) => {
+                            pedido.tickEntregado = e.target.checked;
+                            guardarEnNube();
+                        };
+                    }
                 }, 0);
 
                 const body = document.createElement('div');
@@ -875,9 +900,7 @@
                     check.checked = item.marcado;
                     check.onchange = (e) => {
                         item.marcado = e.target.checked;
-                        if(item.marcado) li.classList.add('marcado');
-                        else li.classList.remove('marcado');
-                        guardarEnMemoria();
+                        guardarEnNube();
                     };
 
                     const spanText = document.createElement('span');
@@ -887,17 +910,17 @@
                     const inputSoloTengo = document.createElement('input');
                     inputSoloTengo.type = 'text'; inputSoloTengo.className = 'item-parcial';
                     inputSoloTengo.placeholder = 'Solo tengo...'; inputSoloTengo.value = item.soloTengo || '';
-                    inputSoloTengo.oninput = (e) => { item.soloTengo = e.target.value; guardarEnMemoria(); };
+                    inputSoloTengo.onchange = (e) => { item.soloTengo = e.target.value; guardarEnNube(); };
 
                     const inputReemplazo = document.createElement('input');
                     inputReemplazo.type = 'text'; inputReemplazo.className = 'item-reemplazo';
                     inputReemplazo.placeholder = 'Reemplazo...'; inputReemplazo.value = item.reemplazo || '';
-                    inputReemplazo.oninput = (e) => { item.reemplazo = e.target.value; guardarEnMemoria(); };
+                    inputReemplazo.onchange = (e) => { item.reemplazo = e.target.value; guardarEnNube(); };
 
                     const inputNota = document.createElement('input');
                     inputNota.type = 'text'; inputNota.className = 'item-nota';
                     inputNota.placeholder = 'Nota...'; inputNota.value = item.nota || '';
-                    inputNota.oninput = (e) => { item.nota = e.target.value; guardarEnMemoria(); };
+                    inputNota.onchange = (e) => { item.nota = e.target.value; guardarEnNube(); };
 
                     li.appendChild(check); li.appendChild(spanText);
                     li.appendChild(inputSoloTengo); li.appendChild(inputReemplazo); li.appendChild(inputNota);
@@ -931,7 +954,7 @@
                             <button type="button" style="border:none; background:transparent; cursor:pointer; font-size:14px;" onclick="habilitarEdicionFaltantes('${pedido.id}')">✏️</button>
                         </div>
                     </label>
-                    <textarea class="caja-faltantes" id="faltantes-${pedido.id}" readonly oninput="guardarTextoFaltantes('${pedido.id}', this.value)">${pedido.textoFaltantesGuardado || ''}</textarea>
+                    <textarea class="caja-faltantes" id="faltantes-${pedido.id}" readonly onchange="guardarTextoFaltantes('${pedido.id}', this.value)">${pedido.textoFaltantesGuardado || ''}</textarea>
                     <button class="btn-accion" style="width:100%; background:#2e7d32; font-size:12px; padding:5px;" onclick="generarFaltantes('${pedido.id}')">Recopilar Faltantes</button>
                 `;
                 
@@ -939,18 +962,17 @@
                 divPostIt.appendChild(body);
                 contenedor.appendChild(divPostIt);
             });
-        }
+        };
 
-        function toggleArchivar(id) {
+        window.toggleArchivar = function(id) {
             const pedido = pedidos.find(p => p.id === id);
             if (pedido) {
                 pedido.archivado = !pedido.archivado;
-                guardarEnMemoria();
-                renderizarPedidos();
+                guardarEnNube();
             }
-        }
+        };
 
-        // --- CONSOLIDACIÓN DE FALTANTES POR SUCURSAL PERSISTENTES ---
+        // --- CONSOLIDACIÓN DE FALTANTES POR SUCURSAL ---
         function renderizarFaltantesPorSucursal(contenedor) {
             let acumFaltantes = { 'Maipu': {}, 'Mendoza': {}, 'Chango Mas': {} };
 
@@ -1011,7 +1033,7 @@
             contenedor.appendChild(grid);
         }
 
-        // --- FALTANTES GENERALES PERSISTENTES COMPARTIDOS ---
+        // --- FALTANTES GENERALES COMPARTIDOS ---
         function renderizarFaltantesCompartidos(contenedor) {
             let acumGlobal = {};
 
@@ -1057,7 +1079,7 @@
             contenedor.appendChild(grid);
         }
 
-        function filtrarCajaFaltante(idTextarea, idBuscador) {
+        window.filtrarCajaFaltante = function(idTextarea, idBuscador) {
             const area = document.getElementById(idTextarea);
             const busq = normalizarTexto(document.getElementById(idBuscador).value);
             const lineasOriginales = (area.getAttribute('data-original') || '').split('\n');
@@ -1069,9 +1091,9 @@
 
             const filtradas = lineasOriginales.filter(linea => normalizarTexto(linea).includes(busq));
             area.value = filtradas.join('\n') || 'Sin coincidencias.';
-        }
+        };
 
-        // --- TARJETAS INTERACTIVAS FALTANTES POR PEDIDO ---
+        // --- TARJETAS INTERACTIVAS DE FALTANTES ---
         function renderizarFaltantesDePedidosEspecificos(contenedor) {
             let hayFaltantes = false;
 
@@ -1136,7 +1158,7 @@
             }
         }
 
-        // --- VISTA: CATÁLOGO DE PRODUCTOS (EXCEL) CON DETECCIÓN UNIDAD/PESO ---
+        // --- CATÁLOGO DE PRODUCTOS ---
         function renderizarCatalogoProductos(contenedor) {
             const box = document.createElement('div');
             box.className = 'box-productos-catalogo';
@@ -1165,7 +1187,7 @@
             contenedor.appendChild(box);
         }
 
-        function filtrarTablaCatalogo() {
+        window.filtrarTablaCatalogo = function() {
             const query = normalizarTexto(document.getElementById('busc-catalogo').value);
             const rows = document.querySelectorAll('#tablaCatalogo tbody tr');
 
@@ -1173,11 +1195,10 @@
                 const text = normalizarTexto(row.cells[0].textContent);
                 row.style.display = text.includes(query) ? '' : 'none';
             });
-        }
+        };
 
-        function agregarProductoAlArmador(nombreProd) {
+        window.agregarProductoAlArmador = function(nombreProd) {
             const areaTexto = document.getElementById('textoPedido');
-            
             let esEmpaquetadoUnidad = /(gr|ml|lt|saq|pack|alfajor|barra|promo)/i.test(nombreProd);
             let formatoAgregado = esEmpaquetadoUnidad ? `1 un - ${nombreProd}` : `1 kg ${nombreProd}`;
 
@@ -1187,10 +1208,10 @@
                 areaTexto.value = formatoAgregado;
             }
             alert(`✅ Se agregó "${formatoAgregado}" al armador de pedidos.`);
-        }
+        };
 
-        // --- UTILIDADES ---
-        function agregarSeparacionMulti(idPedido, idItem) {
+        // --- SEPARACIONES Y HERRAMIENTAS ---
+        window.agregarSeparacionMulti = function(idPedido, idItem) {
             const suc = document.getElementById(`suc-sep-${idItem}`).value;
             const cant = document.getElementById(`cant-sep-${idItem}`).value.trim();
 
@@ -1202,81 +1223,82 @@
                 if (item) {
                     if (!item.separaciones) item.separaciones = [];
                     item.separaciones.push({ sucursal: suc, cantidad: cant });
-                    guardarEnMemoria();
-                    renderizarPedidos();
+                    guardarEnNube();
                 }
             }
-        }
+        };
 
-        function quitarSeparacionMulti(idPedido, idItem, index) {
+        window.quitarSeparacionMulti = function(idPedido, idItem, index) {
             const pedido = pedidos.find(p => p.id === idPedido);
             if (pedido) {
                 const item = pedido.items.find(i => i.idItem === idItem);
                 if (item && item.separaciones) {
                     item.separaciones.splice(index, 1);
-                    guardarEnMemoria();
-                    renderizarPedidos();
+                    guardarEnNube();
                 }
             }
-        }
+        };
 
-        function copiarTextoArea(idArea) {
+        window.copiarTextoArea = function(idArea) {
             const area = document.getElementById(idArea);
             if (area && area.value) {
                 area.select();
                 navigator.clipboard.writeText(area.value);
                 alert("📋 ¡Copiado al portapapeles!");
             }
-        }
+        };
 
-        function habilitarEdicionFaltantes(idPedido) {
+        window.habilitarEdicionFaltantes = function(idPedido) {
             const area = document.getElementById(`faltantes-${idPedido}`);
             if (area) { area.removeAttribute('readonly'); area.focus(); }
-        }
+        };
 
-        function guardarTextoFaltantes(idPedido, valor) {
+        window.guardarTextoFaltantes = function(idPedido, valor) {
             const pedido = pedidos.find(p => p.id === idPedido);
-            if (pedido) { pedido.textoFaltantesGuardado = valor; guardarEnMemoria(); }
-        }
+            if (pedido) { pedido.textoFaltantesGuardado = valor; guardarEnNube(); }
+        };
 
-        function cargarRemito(idPedido, event) {
+        window.cargarRemito = function(idPedido, event) {
             const file = event.target.files[0];
             if (file && file.type === 'application/pdf') {
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     const pedido = pedidos.find(p => p.id === idPedido);
-                    if (pedido) { pedido.remitoPdf = e.target.result; guardarEnMemoria(); renderizarPedidos(); }
+                    if (pedido) { pedido.remitoPdf = e.target.result; guardarEnNube(); }
                 };
                 reader.readAsDataURL(file);
             }
-        }
+        };
 
-        function verRemito(idPedido) {
+        window.verRemito = function(idPedido) {
             const pedido = pedidos.find(p => p.id === idPedido);
             if (pedido && pedido.remitoPdf) {
                 const win = window.open();
                 win.document.write(`<iframe src="${pedido.remitoPdf}" frameborder="0" style="border:0; top:0; left:0; width:100%; height:100%;" allowfullscreen></iframe>`);
             }
-        }
+        };
 
-        function eliminarRemito(idPedido) {
+        window.eliminarRemito = function(idPedido) {
             if (confirm("¿Deseas quitar el remito?")) {
                 const pedido = pedidos.find(p => p.id === idPedido);
-                if (pedido) { pedido.remitoPdf = null; guardarEnMemoria(); renderizarPedidos(); }
+                if (pedido) { pedido.remitoPdf = null; guardarEnNube(); }
             }
-        }
+        };
 
-        function cambiarSesionChat(numSesion) {
+        // --- CHAT GLOBAL Y SESIONES ---
+        window.cambiarSesionChat = function(numSesion) {
             sesionChatActiva = numSesion;
             document.getElementById('tabChat1').classList.toggle('activo', numSesion === 1);
             document.getElementById('tabChat2').classList.toggle('activo', numSesion === 2);
             initChatUI();
             renderizarPedidos();
-        }
+        };
 
         function initChatUI() {
             const currUser = getUsuarioChatActual();
             const sessionBox = document.getElementById('chatSessionBox');
+            if (!sessionBox) return;
+
             if (currUser) {
                 document.getElementById('chatAuthBox').style.display = 'none';
                 sessionBox.style.display = 'flex';
@@ -1288,28 +1310,28 @@
             }
         }
 
-        function registrarUsuarioChat() {
+        window.registrarUsuarioChat = function() {
             const u = document.getElementById('regUser').value.trim();
             const p = document.getElementById('regPass').value.trim();
             const s = document.getElementById('regSucursal').value;
             if (!u || !p) return;
             if (chatUsuarios.find(x => x.user.toLowerCase() === u.toLowerCase())) { alert("Usuario existente."); return; }
             chatUsuarios.push({ user: u, pass: p, sucursal: s, isAdmin: false });
-            guardarEnMemoria();
+            guardarEnNube();
             alert("Cuenta creada.");
-        }
+        };
 
-        function loginChat() {
+        window.loginChat = function() {
             const u = document.getElementById('loginUser').value.trim();
             const p = document.getElementById('loginPass').value.trim();
             const userFound = chatUsuarios.find(x => x.user.toLowerCase() === u.toLowerCase() && x.pass === p);
             if (userFound) { setUsuarioChatActual(userFound); initChatUI(); }
             else { alert("Credenciales incorrectas."); }
-        }
+        };
 
-        function logoutChat() { setUsuarioChatActual(null); initChatUI(); }
+        window.logoutChat = function() { setUsuarioChatActual(null); initChatUI(); };
 
-        function enviarMensajeChat() {
+        window.enviarMensajeChat = function() {
             const txtInput = document.getElementById('chatInputMsg');
             const texto = txtInput.value.trim();
             const currUser = getUsuarioChatActual();
@@ -1318,12 +1340,14 @@
                     id: Date.now().toString(), user: currUser.user, sucursal: currUser.sucursal,
                     texto: texto, fecha: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                 });
-                guardarEnMemoria(); txtInput.value = ''; renderizarMensajesChat();
+                guardarEnNube(); 
+                txtInput.value = '';
             }
-        }
+        };
 
         function renderizarMensajesChat() {
             const box = document.getElementById('chatMessagesBox');
+            if (!box) return;
             box.innerHTML = '';
             chatMensajes.forEach(msg => {
                 const div = document.createElement('div');
@@ -1337,20 +1361,20 @@
             box.scrollTop = box.scrollHeight;
         }
 
-        function borrarMsgChat(idMsg) { chatMensajes = chatMensajes.filter(m => m.id !== idMsg); guardarEnMemoria(); renderizarMensajesChat(); }
-        function editarMsgChat(idMsg) {
+        window.borrarMsgChat = function(idMsg) { chatMensajes = chatMensajes.filter(m => m.id !== idMsg); guardarEnNube(); };
+        window.editarMsgChat = function(idMsg) {
             const m = chatMensajes.find(m => m.id === idMsg);
-            if (m) { const t = prompt("Editar:", m.texto); if (t) { m.texto = t.trim(); guardarEnMemoria(); renderizarMensajesChat(); } }
-        }
+            if (m) { const t = prompt("Editar:", m.texto); if (t) { m.texto = t.trim(); guardarEnNube(); } }
+        };
 
         window.toggleMinimizar = function(id) {
             const pedido = pedidos.find(p => p.id === id);
-            if (pedido) { pedido.minimizado = !pedido.minimizado; guardarEnMemoria(); renderizarPedidos(); }
-        }
+            if (pedido) { pedido.minimizado = !pedido.minimizado; guardarEnNube(); }
+        };
 
         window.eliminarPedido = function(id) {
-            if (confirm("¿Borrar definitivamente este pedido de la memoria?")) { pedidos = pedidos.filter(p => p.id !== id); guardarEnMemoria(); renderizarPedidos(); }
-        }
+            if (confirm("¿Borrar definitivamente este pedido de la nube?")) { pedidos = pedidos.filter(p => p.id !== id); guardarEnNube(); }
+        };
 
         window.generarFaltantes = function(id) {
             const pedido = pedidos.find(p => p.id === id);
@@ -1366,9 +1390,15 @@
                     }
                 });
                 pedido.textoFaltantesGuardado = textoFaltantes || "¡Pedido completo! No falta nada.";
-                guardarEnMemoria();
-                renderizarPedidos();
+                guardarEnNube();
             }
+        };
+
+        // Sugerencias locales
+        const txtSug = document.getElementById('txtSugerencia');
+        if (txtSug) {
+            txtSug.value = localStorage.getItem('sugerenciaGuardada') || '';
+            txtSug.oninput = (e) => localStorage.setItem('sugerenciaGuardada', e.target.value);
         }
     </script>
 </body>
