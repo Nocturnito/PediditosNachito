@@ -3,14 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestor de Pedidos - Pro v3.4 (Nube)</title>
+    <title>Gestor de Pedidos - Pro v3.8 (Margen Extra)</title>
+    <!-- Librerías para leer Excel (SheetJS) y PDF (PDF.js) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+    
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
         * { box-sizing: border-box; }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #fbf9f4;
-            color: #2d3748;
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f6f7f9;
+            color: #1e293b;
             padding: 15px;
+            /* Margen extra inferior de 150px para poder deslizar de sobra */
+            padding-bottom: 165px; 
             margin: 0;
             width: 100vw;
             min-height: 100vh;
@@ -19,304 +30,306 @@
 
         /* OVERLAY Y PANTALLA DE LOGIN OBLIGATORIO */
         .login-screen-overlay {
-            position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            background: rgba(251, 249, 244, 0.98);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(246, 247, 249, 0.95); backdrop-filter: blur(5px);
+            display: flex; justify-content: center; align-items: center; z-index: 9999;
         }
-
         .login-card-modal {
-            background: white;
-            padding: 25px 30px;
-            border-radius: 16px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            border: 1px solid #e2dacd;
-            width: 360px;
-            max-width: 90%;
+            background: white; padding: 30px; border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;
+            width: 380px; max-width: 90%;
         }
+        .login-card-modal h2 { margin-top: 0; color: #166534; text-align: center; font-size: 22px; margin-bottom: 5px; }
 
-        .login-card-modal h2 {
-            margin-top: 0;
-            color: #2e7d32;
-            text-align: center;
-            font-size: 20px;
-        }
-
-        .login-tabs { display: flex; gap: 8px; margin-bottom: 15px; }
+        .login-tabs { display: flex; gap: 8px; margin-bottom: 20px; margin-top: 15px; }
         .btn-auth-tab {
-            flex: 1; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px;
-            background: #f7fafc; cursor: pointer; font-weight: bold; font-size: 12px;
+            flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 10px;
+            background: #f8fafc; cursor: pointer; font-weight: 600; font-size: 13px; color: #64748b; transition: all 0.2s ease;
         }
-        .btn-auth-tab.activo { background: #2e7d32; color: white; border-color: #2e7d32; }
+        .btn-auth-tab:hover { background: #f1f5f9; transform: translateY(-1px); }
+        .btn-auth-tab.activo { background: #166534; color: white; border-color: #166534; box-shadow: 0 4px 10px rgba(22, 101, 52, 0.25); }
 
-        .auth-form-group { display: flex; flex-direction: column; gap: 10px; }
+        .auth-form-group { display: flex; flex-direction: column; gap: 12px; }
         .auth-form-group input, .auth-form-group select {
-            padding: 9px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px; outline: none;
+            padding: 12px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 14px; outline: none; transition: border 0.2s; cursor: pointer;
         }
-        .auth-form-group input:focus { border-color: #2e7d32; }
+        .auth-form-group input:focus, .auth-form-group select:focus { border-color: #166534; box-shadow: 0 0 0 3px rgba(22,101,52,0.1); cursor: text; }
 
         /* HEADER SUPERIOR Y BARRA DE USUARIO */
         .header-top-bar {
             display: flex; justify-content: space-between; align-items: center;
-            background: white; padding: 10px 18px; border-radius: 12px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 15px; border: 1px solid #e2dacd;
+            background: white; padding: 12px 20px; border-radius: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 15px; border: 1px solid #e2e8f0;
             flex-wrap: wrap; gap: 10px;
         }
-        .header-top-bar h2 { margin: 0; font-size: 16px; color: #2e7d32; font-weight: 700; }
+        .header-logo-section { display: flex; align-items: center; gap: 15px; }
+        .app-logo { max-height: 45px; border-radius: 8px; display: none; object-fit: contain; }
+        .header-top-bar h2 { margin: 0; font-size: 18px; color: #166534; font-weight: 700; display: flex; align-items: center; gap: 10px; }
         
         .user-status-badge {
-            display: flex; align-items: center; gap: 10px; background: #f0fdf4;
-            padding: 4px 12px; border-radius: 20px; border: 1px solid #bbf7d0; font-size: 12px; font-weight: bold;
+            display: flex; align-items: center; gap: 12px; background: #f0fdf4;
+            padding: 6px 16px; border-radius: 20px; border: 1px solid #bbf7d0; font-size: 13px; font-weight: 600; color: #166534;
         }
 
         /* BARRA DE FILTROS SUPERIOR */
         .filtros-sucursal {
-            display: flex; gap: 8px; margin-bottom: 15px; background: white;
-            padding: 10px 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            align-items: center; border-left: 5px solid #2e7d32; border: 1px solid #e2dacd;
+            display: flex; gap: 10px; margin-bottom: 20px; background: white;
+            padding: 12px 18px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            align-items: center; border-left: 6px solid #166534; border-top: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;
             flex-wrap: wrap; width: 100%;
         }
-        .filtros-sucursal span { font-weight: bold; color: #2e7d32; font-size: 13px; margin-right: 5px; }
+        .filtros-sucursal span { font-weight: 700; color: #166534; font-size: 14px; margin-right: 5px; }
         
         .btn-filtro {
-            background-color: #f5f0eb; color: #2d3748; border: 1px solid #e2dacd;
-            padding: 6px 12px; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 12px; transition: all 0.2s;
+            background-color: #f8fafc; color: #475569; border: 1px solid #cbd5e1;
+            padding: 9px 16px; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 12px; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: all 0.2s ease;
         }
-        .btn-filtro:hover { background-color: #e6dfd3; }
-        .btn-filtro.activo { background-color: #2e7d32; color: white; border-color: #2e7d32; box-shadow: 0 2px 4px rgba(46, 125, 50, 0.3); }
-        .btn-filtro.btn-inicio-tab { background-color: #e0f2fe; color: #0369a1; border-color: #bae6fd; }
+        .btn-filtro:hover { background-color: #f1f5f9; transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
+        .btn-filtro.activo { background-color: #166534; color: white; border-color: #166534; box-shadow: 0 4px 12px rgba(22, 101, 52, 0.3); }
+        .btn-filtro.btn-inicio-tab { background-color: #f0f9ff; color: #0284c7; border-color: #bae6fd; }
         .btn-filtro.btn-inicio-tab.activo { background-color: #0284c7; color: white; border-color: #0284c7; }
-        .btn-filtro.btn-faltantes-tab { background-color: #fff3e0; color: #e65100; border-color: #ffe0b2; }
-        .btn-filtro.btn-faltantes-tab.activo { background-color: #e65100; color: white; border-color: #e65100; }
-        .btn-filtro.btn-archivados-tab { background-color: #f3e8ff; color: #6b21a8; border-color: #e9d5ff; }
-        .btn-filtro.btn-archivados-tab.activo { background-color: #7e22ce; color: white; border-color: #7e22ce; }
-        .btn-filtro.btn-compartidos-tab { background-color: #ffebee; color: #c62828; border-color: #ffcdd2; }
-        .btn-filtro.btn-compartidos-tab.activo { background-color: #c62828; color: white; border-color: #c62828; }
-        .btn-filtro.btn-productos-tab { background-color: #e0f2fe; color: #0369a1; border-color: #bae6fd; }
-        .btn-filtro.btn-productos-tab.activo { background-color: #0284c7; color: white; border-color: #0284c7; }
-        .btn-filtro.btn-cuentas-tab { background-color: #fef3c7; color: #92400e; border-color: #fde68a; }
+        .btn-filtro.btn-faltantes-tab { background-color: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+        .btn-filtro.btn-faltantes-tab.activo { background-color: #ea580c; color: white; border-color: #ea580c; }
+        .btn-filtro.btn-archivados-tab { background-color: #faf5ff; color: #7e22ce; border-color: #e9d5ff; }
+        .btn-filtro.btn-archivados-tab.activo { background-color: #9333ea; color: white; border-color: #9333ea; }
+        .btn-filtro.btn-compartidos-tab { background-color: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+        .btn-filtro.btn-compartidos-tab.activo { background-color: #dc2626; color: white; border-color: #dc2626; }
+        .btn-filtro.btn-productos-tab { background-color: #f0fdfa; color: #0d9488; border-color: #99f6e4; }
+        .btn-filtro.btn-productos-tab.activo { background-color: #0d9488; color: white; border-color: #0d9488; }
+        .btn-filtro.btn-cuentas-tab { background-color: #fffbeb; color: #b45309; border-color: #fde68a; }
         .btn-filtro.btn-cuentas-tab.activo { background-color: #d97706; color: white; border-color: #d97706; }
 
-        /* BUSCADOR GENERAL DE PEDIDOS */
+        /* BUSCADOR GENERAL */
         .barra-buscador-pedidos {
-            width: 100%; margin-bottom: 15px; background: white; padding: 10px 15px;
-            border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); display: flex;
-            align-items: center; gap: 10px; border: 1px solid #e2dacd;
+            width: 100%; margin-bottom: 20px; background: white; padding: 12px 18px;
+            border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex;
+            align-items: center; gap: 12px; border: 1px solid #e2e8f0;
         }
         .input-buscador-pedidos {
-            flex: 1; padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e0; font-size: 13px; outline: none;
+            flex: 1; padding: 10px 14px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 14px; outline: none; transition: border 0.2s; cursor: pointer;
         }
+        .input-buscador-pedidos:focus { border-color: #166534; box-shadow: 0 0 0 3px rgba(22,101,52,0.1); cursor: text; }
 
-        /* LAYOUT PRINCIPAL RESPONSIVE */
-        .main-layout { display: flex; gap: 15px; width: 100%; align-items: flex-start; }
+        /* LAYOUT PRINCIPAL */
+        .main-layout { display: flex; gap: 20px; width: 100%; align-items: flex-start; }
         .main-layout.forced-vertical { flex-direction: column !important; }
-
-        .left-col { flex: 1; display: flex; flex-direction: column; gap: 15px; min-width: 0; width: 100%; }
-        .right-col { width: 350px; display: flex; flex-direction: column; gap: 15px; flex-shrink: 0; }
+        .left-col { flex: 1; display: flex; flex-direction: column; gap: 20px; min-width: 0; width: 100%; }
+        .right-col { width: 360px; display: flex; flex-direction: column; gap: 20px; flex-shrink: 0; }
         .main-layout.forced-vertical .right-col { width: 100% !important; }
 
         /* FORMULARIOS DESPLEGABLES */
-        .top-forms { display: flex; gap: 15px; width: 100%; flex-wrap: wrap; }
+        .top-forms { display: flex; gap: 20px; width: 100%; flex-wrap: wrap; }
         .formulario-details, .panel-empleados-details {
-            background: white; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            padding: 12px 15px; border: 1px solid #e2dacd;
+            background: white; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            padding: 16px 20px; border: 1px solid #e2e8f0; transition: box-shadow 0.3s;
         }
-        .formulario-details { border-top: 4px solid #e65100; flex: 2; min-width: 280px; }
-        .panel-empleados-details { border-top: 4px solid #2e7d32; flex: 1; min-width: 240px; }
+        .formulario-details:hover, .panel-empleados-details:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.06); }
+        .formulario-details { border-top: 5px solid #ea580c; flex: 2; min-width: 280px; }
+        .panel-empleados-details { border-top: 5px solid #166534; flex: 1; min-width: 240px; }
 
         .formulario-details summary, .panel-empleados-details summary {
-            font-weight: bold; cursor: pointer; font-size: 15px; user-select: none; margin-bottom: 8px;
+            font-weight: 700; cursor: pointer; font-size: 15px; user-select: none; margin-bottom: 12px; list-style: none; display: flex; align-items: center; gap: 8px;
         }
-        .formulario-details summary { color: #e65100; }
-        .panel-empleados-details summary { color: #2e7d32; }
+        .formulario-details summary::-webkit-details-marker, .panel-empleados-details summary::-webkit-details-marker { display: none; }
+        .formulario-details summary { color: #ea580c; }
+        .panel-empleados-details summary { color: #166534; }
 
-        .empleados-grupo { display: flex; gap: 5px; margin-bottom: 8px; }
-        .empleados-grupo input { flex: 1; padding: 6px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px; }
-        .lista-tags { display: flex; flex-wrap: wrap; gap: 5px; max-height: 80px; overflow-y: auto; }
-        .tag-empleado { background: #e8f5e9; padding: 3px 8px; border-radius: 12px; font-size: 12px; display: flex; align-items: center; gap: 5px; color: #2e7d32; font-weight: 600; }
-        .tag-empleado span { cursor: pointer; color: #d32f2f; font-weight: bold; }
-
-        /* CHAT GLOBAL Y PANELES DERECHOS */
-        .panel-chat-details {
-            background: white; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            border-top: 4px solid #2b6cb0; border: 1px solid #e2dacd; padding: 10px;
-            resize: both; overflow: auto; min-height: 250px; height: 380px; width: 100%; min-width: 260px;
-            display: flex; flex-direction: column;
+        /* BOTONES E INPUTS REDISEÑADOS CON CURSOR DE MANO */
+        .inputs-grupo { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+        input[type="text"].input-nombre, select.input-select {
+            padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 10px; font-weight: 600; font-size: 13px; outline: none; transition: border 0.2s; cursor: pointer; background-color: #fff;
         }
-        .panel-chat-details summary { font-weight: bold; color: #2b6cb0; cursor: pointer; font-size: 13px; margin-bottom: 5px; }
+        input[type="text"].input-nombre { flex: 2; min-width: 150px; }
+        select.input-select { flex: 1; min-width: 120px; }
+        input[type="text"].input-nombre:focus, select.input-select:focus { border-color: #ea580c; box-shadow: 0 0 0 3px rgba(234,88,12,0.1); cursor: text; }
+
+        textarea.caja-texto { width: 100%; height: 70px; padding: 10px; border-radius: 10px; border: 1px solid #cbd5e1; resize: vertical; margin-bottom: 10px; font-size: 13px; outline: none; transition: border 0.2s; font-family: inherit; cursor: pointer; }
+        textarea.caja-texto:focus { border-color: #ea580c; box-shadow: 0 0 0 3px rgba(234,88,12,0.1); cursor: text; }
         
-        .chat-container-inner { display: flex; flex-direction: column; flex: 1; min-height: 0; width: 100%; }
-        .chat-messages {
-            flex: 1; min-height: 120px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px;
-            padding: 6px; background: #fafafa; margin-bottom: 8px; display: flex; flex-direction: column; gap: 4px;
-        }
-        .msg-item { font-size: 11px; line-height: 1.2; word-break: break-word; }
-        .msg-item .tag-suc { font-weight: bold; padding: 1px 3px; border-radius: 3px; color: white; font-size: 9px; margin-right: 3px; }
-        .tag-maipu { background-color: #2e7d32; }
-        .tag-mendoza { background-color: #e65100; }
-        .tag-chango { background-color: #f57f17; }
-        .msg-actions { font-size: 10px; color: #718096; cursor: pointer; margin-left: 4px; }
+        input[type="text"].caja-notas-pedido { width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #fde68a; margin-bottom: 12px; font-size: 12px; background: #fffbeb; font-weight: 500; outline: none; cursor: pointer; }
+        input[type="text"].caja-notas-pedido:focus { border-color: #d97706; box-shadow: 0 0 0 3px rgba(217,119,6,0.1); cursor: text; }
 
-        /* SUGERENCIAS EN NOTITAS DESPLEGABLES */
-        .panel-sugerencias-details {
-            background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px;
-            padding: 10px 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid #16a34a;
-        }
-        .panel-sugerencias-details summary { font-weight: bold; color: #15803d; cursor: pointer; font-size: 13px; }
-        
-        .lista-sugerencias-notitas { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
-        .notita-sugerencia-item {
-            background: #fffde7; border: 1px solid #ffe082; border-left: 4px solid #fbc02d;
-            border-radius: 8px; padding: 8px 10px; font-size: 12px;
+        /* ESTILO BOTONES MODERNOS Y ELEGANTE CON MANITO */
+        button, .btn-verde, .btn-accion, .btn-archivar, .btn-eliminar, .btn-admin, .btn-remito, label {
+            cursor: pointer !important;
         }
 
-        /* NOTAS DE ACTUALIZACIONES */
-        .actualizaciones {
-            background-color: #fffde7; border: 1px solid #ffe082; border-radius: 12px;
-            padding: 10px 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid #fbc02d;
+        button.btn-verde { 
+            background: linear-gradient(135deg, #166534 0%, #14532d 100%); color: white; border: none; padding: 10px 18px; border-radius: 10px; 
+            font-weight: 600; font-size: 13px; transition: all 0.25s ease; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+            box-shadow: 0 4px 12px rgba(22, 101, 52, 0.25);
         }
-        .actualizaciones summary { font-weight: bold; color: #f57f17; cursor: pointer; font-size: 13px; }
-        .actualizaciones ul { font-size: 11px; color: #4a5568; margin-top: 6px; padding-left: 15px; line-height: 1.3; max-height: 250px; overflow-y: auto; }
-        .actualizaciones li { margin-bottom: 6px; }
-        .version-badge { background: #f57f17; color: white; padding: 1px 4px; border-radius: 3px; font-size: 9px; font-weight: bold; margin-right: 3px; }
-        .creador-firma { font-size: 11px; color: #718096; text-align: right; margin-top: 4px; font-style: italic; font-weight: bold; }
+        button.btn-verde:hover { background: linear-gradient(135deg, #14532d 0%, #0f3f21 100%); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(22, 101, 52, 0.35); }
+        button.btn-verde:active { transform: translateY(0); }
 
-        /* INPUTS Y CONTROLES GENERALES */
-        .inputs-grupo { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
-        input[type="text"].input-nombre { flex: 2; min-width: 150px; padding: 7px 9px; border: 1px solid #cbd5e0; border-radius: 6px; font-weight: bold; font-size: 12px; }
-        select.input-select { flex: 1; min-width: 110px; padding: 7px; border: 1px solid #cbd5e0; border-radius: 6px; background-color: white; font-weight: bold; font-size: 12px; }
-        
-        .opciones-extra-pedido { display: flex; gap: 12px; align-items: center; font-size: 11px; font-weight: bold; color: #4a5568; margin-bottom: 8px; flex-wrap: wrap; }
-        .opciones-extra-pedido label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+        button.btn-accion { 
+            background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%); color: white; border: none; font-size: 11px; padding: 7px 12px; border-radius: 8px; 
+            font-weight: 600; transition: all 0.2s ease; box-shadow: 0 3px 8px rgba(234, 88, 12, 0.25);
+        }
+        button.btn-accion:hover { background: linear-gradient(135deg, #c2410c 0%, #9a3412 100%); transform: translateY(-1px); box-shadow: 0 5px 12px rgba(234, 88, 12, 0.35); }
 
-        textarea.caja-texto { width: 100%; height: 60px; padding: 6px; border-radius: 6px; border: 1px solid #cbd5e0; resize: vertical; margin-bottom: 8px; font-size: 12px; }
-        input[type="text"].caja-notas-pedido { width: 100%; padding: 6px; border-radius: 6px; border: 1px solid #cbd5e0; margin-bottom: 8px; font-size: 11px; background: #fffde7; }
+        button.btn-archivar { 
+            background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%); color: white; border: none; padding: 7px 12px; font-size: 11px; border-radius: 8px; 
+            font-weight: 600; transition: all 0.2s ease; box-shadow: 0 3px 8px rgba(147, 51, 234, 0.25);
+        }
+        button.btn-archivar:hover { background: linear-gradient(135deg, #7e22ce 0%, #6b21a8 100%); transform: translateY(-1px); box-shadow: 0 5px 12px rgba(147, 51, 234, 0.35); }
 
-        button.btn-verde { background-color: #2e7d32; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; }
-        button.btn-verde:hover { background-color: #1b5e20; }
-        button.btn-eliminar { background-color: #e53e3e; color: white; border: none; padding: 4px 8px; font-size: 11px; border-radius: 4px; cursor: pointer; }
-        button.btn-archivar { background-color: #7e22ce; color: white; border: none; padding: 4px 8px; font-size: 11px; border-radius: 4px; cursor: pointer; }
-        button.btn-accion { background-color: #f57c00; color: white; border: none; font-size: 11px; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+        button.btn-eliminar { 
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; padding: 7px 12px; font-size: 11px; border-radius: 8px; 
+            font-weight: 600; transition: all 0.2s ease; box-shadow: 0 3px 8px rgba(239, 68, 68, 0.25);
+        }
+        button.btn-eliminar:hover { background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); transform: translateY(-1px); box-shadow: 0 5px 12px rgba(239, 68, 68, 0.35); }
+
+        button.btn-admin { 
+            background: linear-gradient(135deg, #475569 0%, #334155 100%); color: white; border: none; padding: 8px 14px; font-size: 12px; border-radius: 10px; 
+            font-weight: 600; transition: all 0.2s ease; box-shadow: 0 3px 8px rgba(71, 85, 105, 0.25);
+        }
+        button.btn-admin:hover { background: linear-gradient(135deg, #334155 0%, #1e293b 100%); transform: translateY(-1px); box-shadow: 0 5px 12px rgba(71, 85, 105, 0.35); }
 
         /* POST-ITS ORIGINALES */
-        #contenedorPedidos { display: flex; flex-wrap: wrap; gap: 15px; width: 100%; align-items: flex-start; }
+        #contenedorPedidos { display: flex; flex-wrap: wrap; gap: 18px; width: 100%; align-items: flex-start; }
         
         .post-it { 
-            background-color: #fffde7; border-radius: 10px; box-shadow: 0 3px 6px rgba(0,0,0,0.08); 
+            background-color: #fffdf0; border-radius: 14px; box-shadow: 0 6px 18px rgba(0,0,0,0.06); 
             width: 370px; min-width: 280px; max-width: 100%;
-            display: flex; flex-direction: column; border-left: 5px solid #fbc02d; transition: background 0.3s ease;
-            resize: both; overflow: auto; border: 1px solid #e2dacd;
+            display: flex; flex-direction: column; border-left: 6px solid #f59e0b; transition: all 0.3s ease;
+            resize: both; overflow: auto; border-top: 1px solid #fef3c7; border-right: 1px solid #fef3c7; border-bottom: 1px solid #fef3c7;
         }
-        .post-it.completado { background-color: #e8f5e9; border-left: 5px solid #2e7d32; }
+        .post-it:hover { box-shadow: 0 10px 25px rgba(0,0,0,0.09); transform: translateY(-2px); }
+        .post-it.completado { background-color: #f0fdf4; border-left: 6px solid #16a34a; border-color: #dcfce7; }
 
-        .post-it-header { padding: 8px 10px; background-color: rgba(0,0,0,0.02); border-bottom: 1px solid rgba(0,0,0,0.06); }
-        .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
-        .header-top h3 { margin: 0; font-size: 14px; color: #1a202c; }
+        .post-it-header { padding: 12px 14px; background-color: rgba(0,0,0,0.02); border-bottom: 1px solid rgba(0,0,0,0.05); }
+        .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+        .header-top h3 { margin: 0; font-size: 15px; color: #1e293b; font-weight: 700; line-height: 1.3; }
         
-        .badge-tipo-cliente { font-size: 10px; font-weight: bold; padding: 1px 5px; border-radius: 3px; background: #e2e8f0; color: #2d3748; margin-left: 4px; }
-        .badge-efectivo { font-size: 10px; font-weight: bold; padding: 1px 5px; border-radius: 3px; background: #c8e6c9; color: #1b5e20; margin-left: 4px; }
-        .badge-fecha { font-size: 10px; color: #718096; font-weight: bold; display: block; margin-top: 2px; }
+        .badge-tipo-cliente { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: #e2e8f0; color: #334155; margin-left: 4px; display: inline-block; }
+        .badge-efectivo { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: #dcfce7; color: #166534; margin-left: 4px; display: inline-block; }
+        .badge-fecha { font-size: 11px; color: #64748b; font-weight: 600; display: block; margin-top: 4px; }
 
-        .personal-row { display: flex; gap: 8px; font-size: 11px; margin-bottom: 6px; color: #4a5568; }
-        .personal-row div { flex: 1; display: flex; flex-direction: column; gap: 1px; }
-        .personal-row select { padding: 3px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 10px; background: #fff; }
+        .personal-row { display: flex; gap: 10px; font-size: 12px; margin-bottom: 8px; color: #475569; font-weight: 500; }
+        .personal-row div { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+        .personal-row select { padding: 5px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 11px; background: #fff; font-family: inherit; font-weight: 600; cursor: pointer; }
 
-        .estado-checks { display: flex; flex-direction: column; gap: 4px; font-size: 11px; font-weight: bold; background-color: rgba(255,255,255,0.7); padding: 5px 7px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.04); }
+        .estado-checks { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600; background-color: rgba(255,255,255,0.7); padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.04); }
         .estado-linea { display: flex; align-items: center; justify-content: space-between; }
-        .estado-linea label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+        .estado-linea label { display: flex; align-items: center; gap: 6px; cursor: pointer; color: #334155; }
+        .estado-linea input[type="checkbox"] { width: 16px; height: 16px; accent-color: #166534; cursor: pointer; }
 
-        .remito-box { margin-top: 4px; padding-top: 4px; border-top: 1px dashed #cbd5e0; font-size: 10px; display: flex; align-items: center; gap: 5px; }
-        .remito-box input[type="file"] { display: none; }
-        .btn-remito { background-color: #2b6cb0; color: white; border: none; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 10px; }
+        .post-it-body { padding: 12px; }
 
-        .nota-general-pedido { background: #fff3e0; border: 1px solid #ffe082; padding: 6px; border-radius: 4px; font-size: 11px; color: #e65100; margin-bottom: 8px; font-weight: 600; line-height: 1.3; }
-
-        .post-it-body { padding: 10px; }
-
-        .lista-items { margin: 0; padding: 0; list-style: none; }
-        .item-row { display: flex; align-items: center; gap: 4px; margin-bottom: 5px; font-size: 11px; flex-wrap: wrap; }
-        .item-row input[type="checkbox"] { margin: 0; width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; accent-color: #2e7d32; }
-        .item-texto { flex: 1; line-height: 1.2; word-break: break-word; color: #2d3748; min-width: 100px; }
+        .lista-items { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+        .item-row { display: flex; align-items: center; gap: 6px; font-size: 12px; flex-wrap: wrap; }
+        .item-row input[type="checkbox"] { margin: 0; width: 16px; height: 16px; cursor: pointer; flex-shrink: 0; accent-color: #166534; }
+        .item-texto { flex: 1; line-height: 1.3; word-break: break-word; color: #334155; min-width: 100px; font-weight: 500; }
         
-        .item-parcial { width: 60px; font-size: 10px; padding: 2px; border: 1px solid #f6ad55; border-radius: 3px; background-color: #fffaf0;}
-        .item-reemplazo { width: 65px; font-size: 10px; padding: 2px; border: 1px solid #ecc94b; border-radius: 3px; background-color: #fefcbf;}
-        .item-nota { width: 45px; font-size: 10px; padding: 2px; border: 1px solid #cbd5e0; border-radius: 3px; }
+        .item-parcial, .item-reemplazo, .item-nota { padding: 5px; border-radius: 6px; font-size: 10px; border: 1px solid; outline: none; font-weight: 600; cursor: pointer; }
+        .item-parcial:focus, .item-reemplazo:focus, .item-nota:focus { cursor: text; }
+        .item-parcial { width: 60px; border-color: #fdba74; background-color: #fff7ed; color: #c2410c; }
+        .item-reemplazo { width: 70px; border-color: #fde047; background-color: #fefce8; color: #a16207; }
+        .item-nota { width: 50px; border-color: #cbd5e1; background-color: #f8fafc; color: #475569; }
         
-        .marcado .item-texto { text-decoration: line-through; color: #a0aec0; }
+        .marcado .item-texto { text-decoration: line-through; color: #94a3b8; }
 
-        .seccion-separa { background-color: #e8f5e9; border: 1px solid #a5d6a7; padding: 6px; border-radius: 6px; margin-top: 8px; font-size: 10px; }
-        .seccion-separa h4 { margin: 0 0 3px 0; color: #1b5e20; font-size: 10px; text-transform: uppercase; }
-        .seccion-separa ul { margin: 0; padding-left: 12px; color: #2e7d32; }
+        .seccion-separa { background-color: #f0fdf4; border: 1px solid #bbf7d0; padding: 8px; border-radius: 8px; margin-top: 12px; font-size: 11px; }
+        .seccion-separa h4 { margin: 0 0 6px 0; color: #166534; font-size: 11px; text-transform: uppercase; font-weight: 700; }
+        .seccion-separa ul { margin: 0; padding-left: 18px; color: #15803d; line-height: 1.4; }
 
-        .seccion-faltantes { margin-top: 10px; padding-top: 8px; border-top: 1px dashed #cbd5e0; }
-        .seccion-faltantes label { font-size: 11px; font-weight: bold; color: #c53030; display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
-        .caja-faltantes { width: 100%; min-height: 70px; font-size: 11px; padding: 6px; border: 1px solid #cbd5e0; border-radius: 6px; resize: vertical; margin-bottom: 5px; background-color: #fff; }
+        .seccion-faltantes { margin-top: 12px; padding-top: 10px; border-top: 1px dashed #cbd5e1; }
+        .seccion-faltantes label { font-size: 12px; font-weight: 700; color: #b91c1c; display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .caja-faltantes { width: 100%; min-height: 70px; font-size: 12px; padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; resize: vertical; margin-bottom: 8px; background-color: #fff; font-family: inherit; outline: none; cursor: pointer; }
+        .caja-faltantes:focus { border-color: #ea580c; cursor: text; }
 
-        .buscador-caja { width: 100%; padding: 6px 10px; font-size: 12px; border: 1px solid #cbd5e0; border-radius: 6px; margin-bottom: 8px; background: #ffffff; }
+        /* FALTANTES ESPECÍFICOS Y COMPARTIDOS */
+        .card-faltante-item { background: #ffffff; border: 1px solid #e2e8f0; padding: 10px; border-radius: 10px; margin-bottom: 8px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.02); }
+        .card-faltante-row { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; color: #475569; }
+        .card-faltante-row input[type="text"], .card-faltante-row select { padding: 5px; font-size: 11px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none; cursor: pointer; }
+        .card-faltante-row input[type="text"]:focus { cursor: text; }
+        .card-faltante-row input[type="text"] { width: 70px; }
 
-        .card-faltante-item { background: #ffffff; border: 1px solid #e2e8f0; padding: 8px; border-radius: 6px; margin-bottom: 6px; display: flex; flex-direction: column; gap: 4px; }
-        .card-faltante-row { display: flex; align-items: center; gap: 6px; font-size: 11px; }
-        .card-faltante-row input[type="text"] { width: 65px; padding: 2px 4px; font-size: 10px; border: 1px solid #cbd5e0; border-radius: 3px; }
-        .card-faltante-row select { padding: 2px 4px; font-size: 10px; border: 1px solid #cbd5e0; border-radius: 3px; }
+        /* CHAT Y PANELES LATERALES */
+        .panel-chat-details, .panel-sugerencias-details, .actualizaciones {
+            background: white; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; padding: 15px; margin-bottom: 15px;
+        }
+        .panel-chat-details { border-top: 5px solid #2563eb; min-height: 250px; height: 380px; display: flex; flex-direction: column; resize: both; overflow: auto; }
+        .panel-sugerencias-details { border-top: 5px solid #16a34a; background: #f0fdf4; border-color: #bbf7d0; }
+        .actualizaciones { border-top: 5px solid #eab308; background: #fefce8; border-color: #fef08a; }
+
+        .panel-chat-details summary, .panel-sugerencias-details summary, .actualizaciones summary { font-weight: 700; cursor: pointer; font-size: 14px; margin-bottom: 10px; list-style: none; }
+        .panel-chat-details summary { color: #1d4ed8; }
+        .panel-sugerencias-details summary { color: #15803d; }
+        .actualizaciones summary { color: #a16207; }
+
+        .chat-messages { flex: 1; min-height: 120px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px; background: #f8fafc; margin-bottom: 10px; display: flex; flex-direction: column; gap: 6px; }
+        .msg-item { font-size: 12px; line-height: 1.4; word-break: break-word; color: #334155; }
+        .msg-item .tag-suc { font-weight: 700; padding: 2px 6px; border-radius: 4px; color: white; font-size: 10px; margin-right: 4px; }
+        
+        .tag-maipu { background-color: #16a34a; }
+        .tag-mendoza { background-color: #ea580c; }
+        .tag-chango { background-color: #eab308; color: #713f12 !important; }
 
         /* GRID Y CONTENEDORES DE FALTANTES */
-        .contenedor-faltantes-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; width: 100%; }
-        .box-faltantes-sucursal { background: white; border-radius: 10px; padding: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid #cbd5e0; border: 1px solid #e2dacd; }
-        .box-faltantes-sucursal.maipu { border-color: #2e7d32; }
-        .box-faltantes-sucursal.mendoza { border-color: #e65100; }
-        .box-faltantes-sucursal.chango { border-color: #f57f17; }
-        .box-faltantes-sucursal.general { border-color: #c53030; background: #fff5f5; }
-        .box-faltantes-sucursal h3 { margin: 0 0 8px 0; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
-        .area-copia-faltantes { width: 100%; height: 160px; font-size: 11px; padding: 6px; border: 1px solid #cbd5e0; border-radius: 6px; background: #fff; resize: vertical; }
+        .contenedor-faltantes-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; width: 100%; }
+        .box-faltantes-sucursal { background: white; border-radius: 16px; padding: 18px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; border-top: 5px solid #cbd5e1; }
+        .box-faltantes-sucursal.maipu { border-top-color: #166534; }
+        .box-faltantes-sucursal.mendoza { border-top-color: #ea580c; }
+        .box-faltantes-sucursal.chango { border-top-color: #eab308; }
+        .box-faltantes-sucursal.general { border-top-color: #dc2626; background: #fef2f2; }
+        .box-faltantes-sucursal h3 { margin: 0 0 12px 0; font-size: 15px; display: flex; justify-content: space-between; align-items: center; color: #1e293b; }
+        .area-copia-faltantes { width: 100%; height: 180px; font-size: 13px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; resize: vertical; outline: none; font-family: inherit; line-height: 1.4; cursor: pointer; }
+        .area-copia-faltantes:focus { border-color: #0ea5e9; cursor: text; }
+        .buscador-caja { width: 100%; padding: 10px; font-size: 13px; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 12px; background: #ffffff; outline: none; transition: border 0.2s; cursor: pointer; }
+        .buscador-caja:focus { border-color: #0ea5e9; cursor: text; }
 
-        /* TABLA CATÁLOGO Y GESTIÓN DE PRODUCTOS */
-        .box-productos-catalogo { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid #0284c7; width: 100%; }
-        .tabla-productos { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
-        .tabla-productos th, .tabla-productos td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
-        .tabla-productos th { background: #f0f9ff; color: #0369a1; font-weight: bold; }
-        .tabla-productos tr:hover { background: #f8fafc; }
+        /* TABLA CATÁLOGO Y LECTOR */
+        .box-productos-catalogo { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border-top: 5px solid #0d9488; width: 100%; }
+        .upload-drop-zone {
+            border: 2px dashed #0d9488; background: #f0fdfa; padding: 20px; border-radius: 12px;
+            text-align: center; margin-bottom: 15px; cursor: pointer !important; transition: background 0.2s;
+        }
+        .upload-drop-zone:hover { background: #ccfbf1; }
+        .tabla-productos { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; margin-top: 15px; }
+        .tabla-productos th, .tabla-productos td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        .tabla-productos th { background: #f0fdfa; color: #0d9488; font-weight: 700; }
+        .tabla-productos th:first-child { border-top-left-radius: 8px; }
+        .tabla-productos th:last-child { border-top-right-radius: 8px; }
+        .tabla-productos tr:hover td { background: #f8fafc; }
 
-        /* SECCIÓN GESTIÓN DE CUENTAS (ADMIN) */
-        .box-gestion-cuentas { background: white; padding: 18px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid #d97706; width: 100%; }
-        .tabla-cuentas { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
-        .tabla-cuentas th, .tabla-cuentas td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
-        .tabla-cuentas th { background: #fef3c7; color: #92400e; font-weight: bold; }
+        /* GESTIÓN DE CUENTAS */
+        .box-gestion-cuentas { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border-top: 5px solid #d97706; width: 100%; }
+        .tabla-cuentas { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 15px; }
+        .tabla-cuentas th, .tabla-cuentas td { padding: 10px 15px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        .tabla-cuentas th { background: #fffbeb; color: #92400e; font-weight: 700; }
 
         @media (max-width: 850px) {
-            body { padding: 8px; }
+            body { padding: 10px; padding-bottom: 165px; }
             .main-layout { flex-direction: column; }
             .right-col { width: 100%; }
             .post-it { width: 100%; }
             .filtros-sucursal { justify-content: center; }
-            .btn-filtro { font-size: 11px; padding: 5px 9px; }
             .panel-chat-details { width: 100% !important; resize: vertical; }
         }
     </style>
 </head>
 <body>
 
-    <!-- OVERLAY DE INICIO DE SESIÓN / REGISTRO OBLIGATORIO -->
+    <!-- OVERLAY DE INICIO DE SESIÓN -->
     <div class="login-screen-overlay" id="screenOverlayLogin">
         <div class="login-card-modal">
             <h2>🛍️ Gestor de Pedidos</h2>
-            <p style="font-size:12px; text-align:center; color:#718096; margin-bottom:15px;">Inicia sesión o regístrate para acceder al sistema.</p>
+            <p style="font-size:13px; text-align:center; color:#64748b; margin-bottom:15px; font-weight: 500;">Inicia sesión o regístrate para acceder al sistema.</p>
             
             <div class="login-tabs">
                 <button class="btn-auth-tab activo" id="tabAuthLogin" onclick="setAuthMode('login')">Ingresar</button>
                 <button class="btn-auth-tab" id="tabAuthReg" onclick="setAuthMode('reg')">Registrarse</button>
             </div>
 
-            <!-- FORMULARIO DE INGRESO -->
             <div class="auth-form-group" id="formAuthLogin">
                 <input type="text" id="globalLoginUser" placeholder="Nombre de usuario">
                 <input type="password" id="globalLoginPass" placeholder="Contraseña">
-                <button class="btn-verde" style="width:100%; margin-top:5px;" onclick="ejecutarGlobalLogin()">Entrar al Sistema</button>
+                <button class="btn-verde" style="width:100%; margin-top:5px; padding: 12px; font-size: 14px;" onclick="ejecutarGlobalLogin()">Entrar al Sistema</button>
             </div>
 
-            <!-- FORMULARIO DE REGISTRO -->
             <div class="auth-form-group" id="formAuthReg" style="display:none;">
                 <input type="text" id="globalRegUser" placeholder="Nombre de usuario">
                 <input type="password" id="globalRegPass" placeholder="Contraseña">
@@ -325,43 +338,47 @@
                     <option value="Mendoza">Mendoza (Naranja)</option>
                     <option value="Chango Mas">Chango Mas (Amarillo)</option>
                 </select>
-                <button class="btn-verde" style="width:100%; margin-top:5px;" onclick="ejecutarGlobalRegistro()">Crear Cuenta</button>
+                <button class="btn-verde" style="width:100%; margin-top:5px; padding: 12px; font-size: 14px;" onclick="ejecutarGlobalRegistro()">Crear Cuenta</button>
             </div>
         </div>
     </div>
 
-    <!-- HEADER SUPERIOR CON INFORMACIÓN DE SESIÓN ACTIVA -->
+    <!-- HEADER SUPERIOR -->
     <div class="header-top-bar">
-        <h2>🛍️ Gestor de Pedidos Vitta</h2>
-        <div style="display:flex; gap:10px; align-items:center;">
+        <div class="header-logo-section">
+            <img id="imgAppLogo" class="app-logo" src="" alt="Logo">
+            <h2>🛍️ Gestor de Pedidos Vitta</h2>
+        </div>
+        <div style="display:flex; gap:12px; align-items:center;">
+            <button id="btnCambiarLogo" class="btn-admin" style="display:none;" onclick="solicitarCambioLogo()">🖼️ Cambiar Logo</button>
             <div class="user-status-badge">
                 👤 <span id="lblUserDisplayHeader">Invitado</span>
-                <button onclick="ejecutarGlobalLogout()" style="font-size:10px; padding:2px 6px; border:none; background:#cbd5e0; border-radius:4px; cursor:pointer;">Salir</button>
+                <button onclick="ejecutarGlobalLogout()" style="font-size:11px; padding:5px 10px; border:none; background:#cbd5e1; border-radius:6px; cursor:pointer; font-weight: 600; color: #334155; transition: background 0.2s;">Salir</button>
             </div>
-            <button class="btn-filtro" onclick="toggleModoVertical()">📱 Acomodar en Vertical</button>
+            <button class="btn-filtro" onclick="toggleModoVertical()">📱 Vista Móvil</button>
         </div>
     </div>
 
     <!-- BARRA DE FILTROS SUPERIOR -->
     <div class="filtros-sucursal">
-        <span>Filtrar sucursal:</span>
-        <button class="btn-filtro btn-inicio-tab" onclick="filtrarSucursal('INICIO_HUB', this)">🏠 INICIO (Novedades/Chat)</button>
+        <span>Filtros:</span>
+        <button class="btn-filtro btn-inicio-tab" onclick="filtrarSucursal('INICIO_HUB', this)">🏠 INICIO</button>
         <button class="btn-filtro activo" onclick="filtrarSucursal('Todos', this)">Todos</button>
         <button class="btn-filtro" onclick="filtrarSucursal('Mendoza', this)">Mendoza</button>
         <button class="btn-filtro" onclick="filtrarSucursal('Chango Mas', this)">Chango Mas</button>
         <button class="btn-filtro" onclick="filtrarSucursal('Maipu', this)">Maipu</button>
-        <button class="btn-filtro btn-archivados-tab" onclick="filtrarSucursal('PEDIDOS_ARCHIVADOS', this)">📂 PEDIDOS ARCHIVADOS</button>
-        <button class="btn-filtro btn-faltantes-tab" onclick="filtrarSucursal('FALTANTES_PEDIDOS', this)">⚠️ FALTANTES DE PEDIDOS</button>
-        <button class="btn-filtro btn-faltantes-tab" onclick="filtrarSucursal('FALTANTES_SUCURSAL', this)">📊 FALTANTES POR SUCURSAL</button>
-        <button class="btn-filtro btn-compartidos-tab" onclick="filtrarSucursal('FALTANTES_COMPARTIDOS', this)">🔴 FALTANTES GENERALES (COMPARTIDOS)</button>
-        <button class="btn-filtro btn-productos-tab" onclick="filtrarSucursal('CATALOGO_PRODUCTOS', this)">📦 CATÁLOGO DE PRODUCTOS</button>
-        <button class="btn-filtro btn-cuentas-tab" id="btnTabGestionCuentas" style="display:none;" onclick="filtrarSucursal('GESTION_CUENTAS', this)">⚙️ GESTIÓN DE CUENTAS</button>
+        <button class="btn-filtro btn-archivados-tab" onclick="filtrarSucursal('PEDIDOS_ARCHIVADOS', this)">📂 ARCHIVADOS</button>
+        <button class="btn-filtro btn-faltantes-tab" onclick="filtrarSucursal('FALTANTES_PEDIDOS', this)">⚠️ FALTANTES PEDIDO</button>
+        <button class="btn-filtro btn-faltantes-tab" onclick="filtrarSucursal('FALTANTES_SUCURSAL', this)">📊 FALTANTES SUCURSAL</button>
+        <button class="btn-filtro btn-compartidos-tab" onclick="filtrarSucursal('FALTANTES_COMPARTIDOS', this)">🔴 GENERALES</button>
+        <button class="btn-filtro btn-productos-tab" onclick="filtrarSucursal('CATALOGO_PRODUCTOS', this)">📦 CATÁLOGO</button>
+        <button class="btn-filtro btn-cuentas-tab" id="btnTabGestionCuentas" style="display:none;" onclick="filtrarSucursal('GESTION_CUENTAS', this)">⚙️ CUENTAS</button>
     </div>
 
-    <!-- BUSCADOR FLEXIBLE DE PEDIDOS -->
+    <!-- BUSCADOR GENERAL -->
     <div class="barra-buscador-pedidos" id="boxBuscadorPedidos">
-        <span>🔍 <b>Buscar cliente:</b></span>
-        <input type="text" id="buscadorPedidosInput" class="input-buscador-pedidos" placeholder="Escribe el nombre del cliente..." oninput="renderizarPedidos()">
+        <span style="font-size: 18px;">🔍</span>
+        <input type="text" id="buscadorPedidosInput" class="input-buscador-pedidos" placeholder="Escribe el nombre del cliente para buscar..." oninput="renderizarPedidos()">
     </div>
 
     <!-- LAYOUT PRINCIPAL -->
@@ -369,7 +386,7 @@
         <!-- COLUMNA IZQUIERDA -->
         <div class="left-col" id="columnaIzquierda">
             <div class="top-forms" id="bloqueFormularios">
-                <!-- FORMULARIO ARMADOR DESPLEGABLE -->
+                <!-- FORMULARIO ARMADOR -->
                 <details class="formulario-details" open>
                     <summary>📋 Armador de Pedidos</summary>
                     <div class="inputs-grupo">
@@ -385,65 +402,59 @@
                             <option value="Página">Página</option>
                         </select>
                     </div>
-
                     <div class="opciones-extra-pedido">
-                        <label><input type="checkbox" id="descEfectivoPedido"> 💵 Descuento en efectivo</label>
+                        <label><input type="checkbox" id="descEfectivoPedido" style="accent-color: #166534; width: 16px; height: 16px;"> 💵 Descuento en efectivo</label>
                     </div>
-
                     <textarea id="textoPedido" class="caja-texto" placeholder="Pega el mensaje del cliente aquí..."></textarea>
                     <input type="text" id="notaGeneralPedido" class="caja-notas-pedido" placeholder="📌 Notas adicionales del pedido...">
-                    
                     <button class="btn-verde" onclick="crearPedido()">➕ Agregar Pedido</button>
                 </details>
 
-                <!-- PANEL EMPLEADOS DESPLEGABLE -->
+                <!-- PANEL EMPLEADOS -->
                 <details class="panel-empleados-details" open>
                     <summary>👥 Personal / Empleados</summary>
-                    <div class="empleados-grupo">
-                        <input type="text" id="nuevoEmpleado" placeholder="Nombre empleado...">
-                        <button class="btn-verde" onclick="agregarEmpleado()" style="padding: 6px 10px; font-size: 12px;">Agregar</button>
+                    <div class="empleados-grupo" style="display:flex; gap:8px;">
+                        <input type="text" id="nuevoEmpleado" placeholder="Nombre empleado..." style="padding:8px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:13px; outline:none; flex:1; cursor:pointer;">
+                        <button class="btn-verde" onclick="agregarEmpleado()" style="padding: 8px 14px;">Añadir</button>
                     </div>
-                    <div class="lista-tags" id="listaEmpleadosTags"></div>
+                    <div class="lista-tags" id="listaEmpleadosTags" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:10px;"></div>
                 </details>
             </div>
 
-            <!-- CONTENEDOR DE POST-ITS / VISTAS -->
+            <!-- CONTENEDOR DE POST-ITS -->
             <div id="contenedorPedidos"></div>
         </div>
 
         <!-- COLUMNA DERECHA -->
         <div class="right-col" id="columnaDerecha">
-            <!-- CHAT GLOBAL -->
             <details class="panel-chat-details" id="boxChatGlobal" open>
-                <summary>💬 CHAT GLOBAL (Ajustable ⇲)</summary>
-                <div class="chat-container-inner">
+                <summary>💬 CHAT GLOBAL</summary>
+                <div class="chat-container-inner" style="display:flex; flex-direction:column; height:calc(100% - 30px);">
                     <div class="chat-messages" id="chatMessagesBox"></div>
-                    <div style="display:flex; gap:4px; margin-top:auto;">
-                        <input type="text" id="chatInputMsg" placeholder="Mensaje..." style="flex:1; padding:4px; font-size:11px; border:1px solid #cbd5e0; border-radius:4px;">
-                        <button class="btn-verde" style="padding:4px 8px; font-size:11px;" onclick="enviarMensajeChat()">Enviar</button>
+                    <div style="display:flex; gap:6px; margin-top:auto;">
+                        <input type="text" id="chatInputMsg" placeholder="Escribe un mensaje..." style="flex:1; padding:8px 10px; font-size:12px; border:1px solid #cbd5e1; border-radius:8px; outline:none; cursor:pointer;">
+                        <button class="btn-verde" style="padding:8px 12px; font-size:12px;" onclick="enviarMensajeChat()">Enviar</button>
                     </div>
                 </div>
             </details>
 
-            <!-- PESTAÑA DESPLEGABLE DE SUGERENCIAS -->
             <details class="panel-sugerencias-details" id="boxSugerencias" open>
                 <summary>💡 SUGERENCIAS DE MEJORA</summary>
                 <div style="margin-top:8px;">
-                    <textarea id="txtNuevaSugerencia" style="width:100%; height:50px; font-size:11px; padding:6px; border-radius:6px; border:1px solid #cbd5e0;" placeholder="Escribe una nueva sugerencia..."></textarea>
-                    <button class="btn-verde" style="width:100%; margin-top:4px; padding:5px; font-size:11px;" onclick="agregarSugerenciaNotita()">➕ Guardar Sugerencia</button>
-                    <div class="lista-sugerencias-notitas" id="contenedorNotitasSugerencias"></div>
+                    <textarea id="txtNuevaSugerencia" style="width:100%; height:60px; font-size:12px; padding:10px; border-radius:8px; border:1px solid #cbd5e1; outline:none; font-family:inherit; cursor:pointer;" placeholder="Escribe una nueva sugerencia..."></textarea>
+                    <button class="btn-verde" style="width:100%; margin-top:8px;" onclick="agregarSugerenciaNotita()">➕ Guardar Sugerencia</button>
+                    <div class="lista-sugerencias-notitas" id="contenedorNotitasSugerencias" style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;"></div>
                 </div>
             </details>
 
-            <!-- NOTAS DE ACTUALIZACIONES -->
             <div class="actualizaciones-container" id="boxActualizaciones">
                 <details class="actualizaciones" open>
-                    <summary>📣 NOTAS DE ACTUALIZACIONES (Últimas 10)</summary>
+                    <summary>📣 NOTAS DE ACTUALIZACIONES</summary>
                     <ul>
-                        <li><span class="version-badge">v3.4</span> <b>Gestión de Productos & Autenticación Global:</b> Cuentas obligatorias, administración de usuarios y catálogo interactivo.</li>
+                        <li><span class="version-badge">v3.8</span> <b>Margen inferior extra:</b> Espacio adicional de desplazamiento añadido al final de la página.</li>
                     </ul>
                 </details>
-                <div class="creador-firma">Creado por : Nazareno Martinez</div>
+                <div class="creador-firma" style="font-size:11px; color:#64748b; margin-top:8px; text-align:center;">Creado por : Nazareno Martinez</div>
             </div>
         </div>
     </div>
@@ -467,8 +478,6 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // DATOS INICIALES DEL SISTEMA
-        const CATALOGO_AMBIGUO = ['sal', 'yerba', 'aceite', 'alfajor', 'harina', 'fideo', 'leche', 'té', 'te', 'miel', 'azucar', 'semillas', 'arroz', 'avena'];
         const CATALOGO_INICIAL_DEFAULT = ["PROMO PAN KAUFER", "Alfajor CHOCOLEIT negro 0% AZUCAR SIN TACC", "Alfajor CELIENERGY Avellana B SIN TACC", "Yerba AJEDREZ PREMIUM CANCHADA 500 gr", "Barra MUECAS Manz Arand 45 gr", "Alfajor CHOCOLEIT blanco 0% AZUCAR SIN TACC", "EdulKONY 200 ml", "Harina de coco CUMANA 200 gr", "Leche Avena Italiana AMANDE 1 Lt", "Premezc. PAN con Psyillum Husk DICOMERE 450 gr SIN TACC", "Alfajor CELIENERGY Nuez SIN TACC", "Pistacho Natural SIN CASC CUMANA 150 gr", "Cereza Marrasquino CUMANA Fr. 200 gr", "Fideo SOYARROZ C Angel 300 gr", "Pistacho Con Cascara CUMANA 150 gr", "Tostadas de arroz DON MARCOS 120gr sin sal", "Miel ORGANICA CRUDA YUNGA ANDINA 330 gr", "Te Alcachofa H DEL OASIS 25 s", "Aceite de coco neutro COSACO 360 ml", "Fideos integrales MATILDE 400 gr GLUTEN", "Gallet. PEPAS DIA VITA 150 gr SIN TACC", "Snack Garbanzo Ahumado CROYDON 60 gr", "Gallet. MARLBORO Avena Coco Pasas 200 gr", "Te CHAI TISSAN Sembras 20 saq", "Aceite de Coco VIRGEN GODBLESS 500 cc", "Granola CRUNCHY Frutos Secos 500 gr", "Nuez Mariposa Extra Blanca 1 kg", "Tutuca Dulce Especial 1 kg", "Masitas Pepas Membrillo 1 kg", "Masitas Palitos Integrales 1 kg", "Fécula de Mandioca Especial 1 kg"];
 
         let pedidos = [];
@@ -478,6 +487,7 @@
         let sugerenciasNotitas = [];
         let catalogoProductos = [];
         let faltantesEspecialesGuardados = { maipu: '', mendoza: '', chango: '', general: '' };
+        let logoAppUrl = '';
         
         let chatUsuarios = [
             { user: 'Admin Fabri', pass: '2222', sucursal: 'Mendoza', isAdmin: true },
@@ -487,7 +497,6 @@
         let usuarioSesionActiva = JSON.parse(localStorage.getItem('usuarioSesionGlobalV34')) || null;
         let sucursalActiva = 'Todos';
 
-        // SINCRONIZACIÓN EN TIEMPO REAL
         onValue(ref(db, 'appData'), (snapshot) => {
             const data = snapshot.val();
             if (data) {
@@ -499,15 +508,18 @@
                 catalogoProductos = data.catalogoProductos || CATALOGO_INICIAL_DEFAULT;
                 faltantesEspecialesGuardados = data.faltantesEspecialesGuardados || { maipu: '', mendoza: '', chango: '', general: '' };
                 chatUsuarios = data.chatUsuarios || chatUsuarios;
+                logoAppUrl = data.logoAppUrl || '';
 
+                actualizarLogoUI();
                 actualizarEstadoAutenticacionUI();
                 renderizarEmpleados();
                 renderizarSugerenciasNotitas();
                 renderizarPedidos();
+                renderizarMensajesChat();
             }
         });
 
-        function guardarEnNube() {
+        window.guardarEnNube = function() {
             set(ref(db, 'appData'), {
                 pedidos: pedidos,
                 empleados: empleados,
@@ -516,341 +528,14 @@
                 sugerenciasNotitas: sugerenciasNotitas,
                 catalogoProductos: catalogoProductos,
                 faltantesEspecialesGuardados: faltantesEspecialesGuardados,
-                chatUsuarios: chatUsuarios
+                chatUsuarios: chatUsuarios,
+                logoAppUrl: logoAppUrl
             });
-        }
+        };
 
         function normalizarTexto(txt) {
             if (!txt) return '';
             return txt.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-        }
-
-        // CONTROL DE ACCESO Y AUTENTICACIÓN GLOBAL
-        function actualizarEstadoAutenticacionUI() {
-            const overlay = document.getElementById('screenOverlayLogin');
-            const lblUser = document.getElementById('lblUserDisplayHeader');
-            const btnTabAdmin = document.getElementById('btnTabGestionCuentas');
-
-            if (usuarioSesionActiva) {
-                // Verificar si los datos del usuario en sesión cambiaron en la nube
-                const userEnNube = chatUsuarios.find(u => u.user.toLowerCase() === usuarioSesionActiva.user.toLowerCase());
-                if (userEnNube) {
-                    usuarioSesionActiva = userEnNube;
-                    localStorage.setItem('usuarioSesionGlobalV34', JSON.stringify(userEnNube));
-                }
-
-                overlay.style.display = 'none';
-                lblUser.textContent = `${usuarioSesionActiva.user} (${usuarioSesionActiva.sucursal}) ${usuarioSesionActiva.isAdmin ? '👑 ADMIN' : ''}`;
-                
-                if (usuarioSesionActiva.isAdmin) {
-                    btnTabAdmin.style.display = 'inline-block';
-                } else {
-                    btnTabAdmin.style.display = 'none';
-                    if (sucursalActiva === 'GESTION_CUENTAS') sucursalActiva = 'Todos';
-                }
-            } else {
-                overlay.style.display = 'flex';
-                lblUser.textContent = 'Invitado';
-                btnTabAdmin.style.display = 'none';
-            }
-        }
-
-        window.setAuthMode = function(modo) {
-            document.getElementById('tabAuthLogin').classList.toggle('activo', modo === 'login');
-            document.getElementById('tabAuthReg').classList.toggle('activo', modo === 'reg');
-            document.getElementById('formAuthLogin').style.display = modo === 'login' ? 'flex' : 'none';
-            document.getElementById('formAuthReg').style.display = modo === 'reg' ? 'flex' : 'none';
-        };
-
-        window.ejecutarGlobalLogin = function() {
-            const u = document.getElementById('globalLoginUser').value.trim();
-            const p = document.getElementById('globalLoginPass').value.trim();
-            const userFound = chatUsuarios.find(x => x.user.toLowerCase() === u.toLowerCase() && x.pass === p);
-            
-            if (userFound) {
-                usuarioSesionActiva = userFound;
-                localStorage.setItem('usuarioSesionGlobalV34', JSON.stringify(userFound));
-                actualizarEstadoAutenticacionUI();
-                renderizarPedidos();
-            } else {
-                alert("Usuario o contraseña incorrectos.");
-            }
-        };
-
-        window.ejecutarGlobalRegistro = function() {
-            const u = document.getElementById('globalRegUser').value.trim();
-            const p = document.getElementById('globalRegPass').value.trim();
-            const s = document.getElementById('globalRegSucursal').value;
-
-            if (!u || !p) { alert("Ingresa usuario y contraseña."); return; }
-            if (chatUsuarios.find(x => x.user.toLowerCase() === u.toLowerCase())) { alert("Ese usuario ya existe."); return; }
-
-            const nuevoUsr = { user: u, pass: p, sucursal: s, isAdmin: false };
-            chatUsuarios.push(nuevoUsr);
-            guardarEnNube();
-
-            usuarioSesionActiva = nuevoUsr;
-            localStorage.setItem('usuarioSesionGlobalV34', JSON.stringify(nuevoUsr));
-            actualizarEstadoAutenticacionUI();
-            renderizarPedidos();
-            alert("Cuenta creada con éxito.");
-        };
-
-        window.ejecutarGlobalLogout = function() {
-            usuarioSesionActiva = null;
-            localStorage.removeItem('usuarioSesionGlobalV34');
-            actualizarEstadoAutenticacionUI();
-        };
-
-        window.toggleModoVertical = function() {
-            document.getElementById('mainLayoutContainer').classList.toggle('forced-vertical');
-        };
-
-        window.filtrarSucursal = function(sucursal, botonElemento) {
-            sucursalActiva = sucursal;
-            document.querySelectorAll('.btn-filtro').forEach(btn => btn.classList.remove('activo'));
-            botonElemento.classList.add('activo');
-
-            const colDer = document.getElementById('columnaDerecha');
-            const formTop = document.getElementById('bloqueFormularios');
-            const boxBusqueda = document.getElementById('boxBuscadorPedidos');
-
-            if (sucursal === 'INICIO_HUB') {
-                colDer.style.display = 'flex';
-                formTop.style.display = 'none';
-                boxBusqueda.style.display = 'none';
-            } else {
-                colDer.style.display = 'none';
-                boxBusqueda.style.display = 'flex';
-                if (sucursal.startsWith('FALTANTES') || sucursal === 'CATALOGO_PRODUCTOS' || sucursal === 'GESTION_CUENTAS') {
-                    formTop.style.display = 'none';
-                } else {
-                    formTop.style.display = 'flex';
-                }
-            }
-
-            renderizarPedidos();
-        };
-
-        // GESTIÓN DE PRODUCTOS DEL CATÁLOGO
-        window.agregarProductoCatalogo = function() {
-            const input = document.getElementById('nuevoProductoNombre');
-            const nombre = input.value.trim();
-            if (nombre) {
-                if (catalogoProductos.some(p => p.toLowerCase() === nombre.toLowerCase())) {
-                    alert("El producto ya existe en el catálogo.");
-                    return;
-                }
-                catalogoProductos.push(nombre);
-                input.value = '';
-                guardarEnNube();
-            }
-        };
-
-        window.modificarProductoCatalogo = function(idx) {
-            const prodActual = catalogoProductos[idx];
-            const nuevoNombre = prompt("Modificar producto:", prodActual);
-            if (nuevoNombre && nuevoNombre.trim() !== '') {
-                catalogoProductos[idx] = nuevoNombre.trim();
-                guardarEnNube();
-            }
-        };
-
-        window.eliminarProductoCatalogo = function(idx) {
-            if (confirm(`¿Eliminar "${catalogoProductos[idx]}" del catálogo?`)) {
-                catalogoProductos.splice(idx, 1);
-                guardarEnNube();
-            }
-        };
-
-        function renderizarCatalogoProductos(contenedor) {
-            const box = document.createElement('div');
-            box.className = 'box-productos-catalogo';
-            box.innerHTML = `
-                <h3 style="color:#0284c7; margin-top:0;">📦 CATÁLOGO DE PRODUCTOS (${catalogoProductos.length} ítems)</h3>
-                
-                <div style="display:flex; gap:8px; margin-bottom:12px;">
-                    <input type="text" id="nuevoProductoNombre" class="input-nombre" placeholder="Nombre del nuevo producto..." style="font-size:12px;">
-                    <button class="btn-verde" onclick="agregarProductoCatalogo()">➕ Añadir al Catálogo</button>
-                </div>
-
-                <input type="text" class="buscador-caja" id="busc-catalogo" placeholder="🔍 Buscar producto en el catálogo..." oninput="filtrarTablaCatalogo()">
-                
-                <div style="max-height:450px; overflow-y:auto;">
-                    <table class="tabla-productos" id="tablaCatalogo">
-                        <thead>
-                            <tr>
-                                <th>Descripción del Producto</th>
-                                <th style="width:220px;">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${catalogoProductos.map((prod, idx) => `
-                                <tr>
-                                    <td>${prod}</td>
-                                    <td style="display:flex; gap:4px;">
-                                        <button class="btn-verde" style="padding:3px 6px; font-size:10px;" onclick="agregarProductoAlArmador('${prod.replace(/'/g, "\\'")}')">➕ Agregar</button>
-                                        <button class="btn-accion" style="padding:3px 6px; font-size:10px;" onclick="modificarProductoCatalogo(${idx})">✏️ Modificar</button>
-                                        <button class="btn-eliminar" style="padding:3px 6px; font-size:10px;" onclick="eliminarProductoCatalogo(${idx})">🗑️ Borrar</button>
-                                    </td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-            contenedor.appendChild(box);
-        }
-
-        window.filtrarTablaCatalogo = function() {
-            const query = normalizarTexto(document.getElementById('busc-catalogo').value);
-            const rows = document.querySelectorAll('#tablaCatalogo tbody tr');
-            rows.forEach(row => { row.style.display = normalizarTexto(row.cells[0].textContent).includes(query) ? '' : 'none'; });
-        };
-
-        window.agregarProductoAlArmador = function(nombreProd) {
-            const areaTexto = document.getElementById('textoPedido');
-            let esEmpaquetadoUnidad = /(gr|ml|lt|saq|pack|alfajor|barra|promo)/i.test(nombreProd);
-            let formatoAgregado = esEmpaquetadoUnidad ? `1 un - ${nombreProd}` : `1 kg ${nombreProd}`;
-            areaTexto.value = areaTexto.value.trim() ? areaTexto.value + `\n${formatoAgregado}` : formatoAgregado;
-            alert(`✅ Se agregó "${formatoAgregado}" al armador de pedidos.`);
-        };
-
-        // GESTIÓN DE CUENTAS (EXCLUSIVO PARA ADMINISTRADORES)
-        function renderizarGestionCuentas(contenedor) {
-            if (!usuarioSesionActiva || !usuarioSesionActiva.isAdmin) {
-                contenedor.innerHTML = `<p style="color:red; font-weight:bold;">Acceso denegado. Se requieren permisos de Administrador.</p>`;
-                return;
-            }
-
-            const box = document.createElement('div');
-            box.className = 'box-gestion-cuentas';
-            box.innerHTML = `
-                <h3 style="color:#d97706; margin-top:0;">⚙️ GESTIÓN DE CUENTAS DE USUARIOS</h3>
-                <p style="font-size:11px; color:#718096;">Edita el nombre de usuario o restablece la contraseña de cualquier cuenta registrada.</p>
-
-                <div style="max-height:450px; overflow-y:auto;">
-                    <table class="tabla-cuentas">
-                        <thead>
-                            <tr>
-                                <th>Usuario</th>
-                                <th>Sucursal</th>
-                                <th>Rol</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${chatUsuarios.map((u, idx) => `
-                                <tr>
-                                    <td><b>${u.user}</b></td>
-                                    <td>${u.sucursal}</td>
-                                    <td>${u.isAdmin ? '👑 Admin' : '👤 Usuario'}</td>
-                                    <td style="display:flex; gap:5px;">
-                                        <button class="btn-accion" style="padding:3px 8px; font-size:10px;" onclick="editarUsuarioCuenta(${idx})">✏️ Nombre</button>
-                                        <button class="btn-archivar" style="padding:3px 8px; font-size:10px;" onclick="editarPasswordCuenta(${idx})">🔑 Contraseña</button>
-                                        ${!u.isAdmin ? `<button class="btn-eliminar" style="padding:3px 8px; font-size:10px;" onclick="eliminarUsuarioCuenta(${idx})">🗑️</button>` : ''}
-                                    </td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-            contenedor.appendChild(box);
-        }
-
-        window.editarUsuarioCuenta = function(idx) {
-            const u = chatUsuarios[idx];
-            const nuevoNombre = prompt("Nuevo nombre de usuario:", u.user);
-            if (nuevoNombre && nuevoNombre.trim() !== '') {
-                chatUsuarios[idx].user = nuevoNombre.trim();
-                guardarEnNube();
-                alert("Nombre de usuario actualizado.");
-            }
-        };
-
-        window.editarPasswordCuenta = function(idx) {
-            const u = chatUsuarios[idx];
-            const nuevaPass = prompt(`Nueva contraseña para ${u.user}:`, u.pass);
-            if (nuevaPass && nuevaPass.trim() !== '') {
-                chatUsuarios[idx].pass = nuevaPass.trim();
-                guardarEnNube();
-                alert("Contraseña actualizada correctamente.");
-            }
-        };
-
-        window.eliminarUsuarioCuenta = function(idx) {
-            if (confirm(`¿Eliminar la cuenta de ${chatUsuarios[idx].user}?`)) {
-                chatUsuarios.splice(idx, 1);
-                guardarEnNube();
-            }
-        };
-
-        // EMPLEADOS Y SUGERENCIAS
-        window.agregarEmpleado = function() {
-            const input = document.getElementById('nuevoEmpleado');
-            const nombre = input.value.trim();
-            if (nombre && !empleados.includes(nombre)) {
-                empleados.push(nombre); input.value = ''; guardarEnNube();
-            }
-        };
-
-        window.eliminarEmpleado = function(nombre) {
-            empleados = empleados.filter(e => e !== nombre); guardarEnNube();
-        };
-
-        function renderizarEmpleados() {
-            const contenedor = document.getElementById('listaEmpleadosTags');
-            if (!contenedor) return;
-            contenedor.innerHTML = '';
-            empleados.forEach(emp => {
-                const tag = document.createElement('div');
-                tag.className = 'tag-empleado';
-                tag.innerHTML = `${emp} <span onclick="eliminarEmpleado('${emp}')">&times;</span>`;
-                contenedor.appendChild(tag);
-            });
-        }
-
-        window.agregarSugerenciaNotita = function() {
-            const txtArea = document.getElementById('txtNuevaSugerencia');
-            const texto = txtArea.value.trim();
-            if (texto) {
-                sugerenciasNotitas.push({ id: Date.now().toString(), texto: texto, fecha: new Date().toLocaleDateString('es-AR') });
-                txtArea.value = ''; guardarEnNube();
-            }
-        };
-
-        window.eliminarSugerenciaNotita = function(id) {
-            sugerenciasNotitas = sugerenciasNotitas.filter(s => s.id !== id); guardarEnNube();
-        };
-
-        window.editarSugerenciaNotita = function(id) {
-            const sug = sugerenciasNotitas.find(s => s.id === id);
-            if (sug) {
-                const nuevo = prompt("Editar sugerencia:", sug.texto);
-                if (nuevo) { sug.texto = nuevo.trim(); guardarEnNube(); }
-            }
-        };
-
-        function renderizarSugerenciasNotitas() {
-            const cont = document.getElementById('contenedorNotitasSugerencias');
-            if (!cont) return;
-            cont.innerHTML = '';
-            sugerenciasNotitas.forEach(s => {
-                const item = document.createElement('details');
-                item.className = 'notita-sugerencia-item';
-                item.innerHTML = `
-                    <summary style="cursor:pointer; font-weight:bold; font-size:11px; display:flex; justify-content:space-between; align-items:center;">
-                        <span>💡 Sugerencia (${s.fecha})</span>
-                        <div>
-                            <button class="btn-accion" style="padding:1px 4px; font-size:9px;" onclick="editarSugerenciaNotita('${s.id}')">✏️</button>
-                            <button class="btn-eliminar" style="padding:1px 4px; font-size:9px;" onclick="eliminarSugerenciaNotita('${s.id}')">🗑️</button>
-                        </div>
-                    </summary>
-                    <div style="font-size:11px; margin-top:4px; color:#4a5568;">${s.texto}</div>
-                `;
-                cont.appendChild(item);
-            });
         }
 
         function extraerCantidadYNombre(cadena) {
@@ -881,25 +566,141 @@
             return parsed.nombre;
         }
 
+        function actualizarLogoUI() {
+            const img = document.getElementById('imgAppLogo');
+            if (logoAppUrl && logoAppUrl.trim() !== '') {
+                img.src = logoAppUrl;
+                img.style.display = 'block';
+            } else {
+                img.style.display = 'none';
+            }
+        }
+
+        window.solicitarCambioLogo = function() {
+            const nuevaUrl = prompt("Pega la URL de la imagen (PNG/JPG) para el Logo:", logoAppUrl);
+            if (nuevaUrl !== null) {
+                logoAppUrl = nuevaUrl.trim();
+                guardarEnNube();
+            }
+        };
+
+        function actualizarEstadoAutenticacionUI() {
+            const overlay = document.getElementById('screenOverlayLogin');
+            const lblUser = document.getElementById('lblUserDisplayHeader');
+            const btnTabAdmin = document.getElementById('btnTabGestionCuentas');
+            const btnLogoAdmin = document.getElementById('btnCambiarLogo');
+
+            if (usuarioSesionActiva) {
+                const userEnNube = chatUsuarios.find(u => u.user.toLowerCase() === usuarioSesionActiva.user.toLowerCase());
+                if (userEnNube) {
+                    usuarioSesionActiva = userEnNube;
+                    localStorage.setItem('usuarioSesionGlobalV34', JSON.stringify(userEnNube));
+                }
+                overlay.style.display = 'none';
+                lblUser.textContent = `${usuarioSesionActiva.user} (${usuarioSesionActiva.sucursal}) ${usuarioSesionActiva.isAdmin ? '👑 ADMIN' : ''}`;
+                
+                if (usuarioSesionActiva.isAdmin) {
+                    btnTabAdmin.style.display = 'inline-block';
+                    btnLogoAdmin.style.display = 'inline-block';
+                } else {
+                    btnTabAdmin.style.display = 'none';
+                    btnLogoAdmin.style.display = 'none';
+                    if (sucursalActiva === 'GESTION_CUENTAS') sucursalActiva = 'Todos';
+                }
+            } else {
+                overlay.style.display = 'flex';
+                lblUser.textContent = 'Invitado';
+                btnTabAdmin.style.display = 'none';
+                btnLogoAdmin.style.display = 'none';
+            }
+        }
+
+        window.setAuthMode = function(modo) {
+            document.getElementById('tabAuthLogin').classList.toggle('activo', modo === 'login');
+            document.getElementById('tabAuthReg').classList.toggle('activo', modo === 'reg');
+            document.getElementById('formAuthLogin').style.display = modo === 'login' ? 'flex' : 'none';
+            document.getElementById('formAuthReg').style.display = modo === 'reg' ? 'flex' : 'none';
+        };
+
+        window.ejecutarGlobalLogin = function() {
+            const u = document.getElementById('globalLoginUser').value.trim();
+            const p = document.getElementById('globalLoginPass').value.trim();
+            const userFound = chatUsuarios.find(x => x.user.toLowerCase() === u.toLowerCase() && x.pass === p);
+            if (userFound) {
+                usuarioSesionActiva = userFound;
+                localStorage.setItem('usuarioSesionGlobalV34', JSON.stringify(userFound));
+                actualizarEstadoAutenticacionUI();
+                renderizarPedidos();
+            } else { alert("Usuario o contraseña incorrectos."); }
+        };
+
+        window.ejecutarGlobalRegistro = function() {
+            const u = document.getElementById('globalRegUser').value.trim();
+            const p = document.getElementById('globalRegPass').value.trim();
+            const s = document.getElementById('globalRegSucursal').value;
+            if (!u || !p) return;
+            if (chatUsuarios.find(x => x.user.toLowerCase() === u.toLowerCase())) { alert("Ese usuario ya existe."); return; }
+            const nuevoUsr = { user: u, pass: p, sucursal: s, isAdmin: false };
+            chatUsuarios.push(nuevoUsr); guardarEnNube();
+            usuarioSesionActiva = nuevoUsr;
+            localStorage.setItem('usuarioSesionGlobalV34', JSON.stringify(nuevoUsr));
+            actualizarEstadoAutenticacionUI(); renderizarPedidos();
+        };
+
+        window.ejecutarGlobalLogout = function() { usuarioSesionActiva = null; localStorage.removeItem('usuarioSesionGlobalV34'); actualizarEstadoAutenticacionUI(); };
+        window.toggleModoVertical = function() { document.getElementById('mainLayoutContainer').classList.toggle('forced-vertical'); };
+
+        window.filtrarSucursal = function(sucursal, botonElemento) {
+            sucursalActiva = sucursal;
+            document.querySelectorAll('.btn-filtro').forEach(btn => btn.classList.remove('activo'));
+            botonElemento.classList.add('activo');
+            const colDer = document.getElementById('columnaDerecha');
+            const formTop = document.getElementById('bloqueFormularios');
+            const boxBusqueda = document.getElementById('boxBuscadorPedidos');
+
+            if (sucursal === 'INICIO_HUB') { colDer.style.display = 'flex'; formTop.style.display = 'none'; boxBusqueda.style.display = 'none'; }
+            else {
+                colDer.style.display = 'none'; boxBusqueda.style.display = 'flex';
+                if (sucursal.startsWith('FALTANTES') || sucursal === 'CATALOGO_PRODUCTOS' || sucursal === 'GESTION_CUENTAS') formTop.style.display = 'none';
+                else formTop.style.display = 'flex';
+            }
+            renderizarPedidos();
+        };
+
+        window.agregarEmpleado = function() { const v = document.getElementById('nuevoEmpleado').value.trim(); if(v && !empleados.includes(v)) { empleados.push(v); document.getElementById('nuevoEmpleado').value=''; guardarEnNube(); } };
+        window.eliminarEmpleado = function(v) { empleados = empleados.filter(e => e !== v); guardarEnNube(); };
+        function renderizarEmpleados() {
+            const cont = document.getElementById('listaEmpleadosTags'); if(!cont) return; cont.innerHTML = '';
+            empleados.forEach(e => { 
+                const d = document.createElement('div'); 
+                d.style.cssText = "background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;";
+                d.innerHTML = `${e} <span style="cursor:pointer; font-weight:bold; color:#dc2626;" onclick="eliminarEmpleado('${e}')">&times;</span>`; 
+                cont.appendChild(d); 
+            });
+        }
+
+        window.agregarSugerenciaNotita = function() { const v = document.getElementById('txtNuevaSugerencia').value.trim(); if(v) { sugerenciasNotitas.push({ id: Date.now().toString(), texto: v, fecha: new Date().toLocaleDateString('es-AR') }); document.getElementById('txtNuevaSugerencia').value=''; guardarEnNube(); } };
+        window.eliminarSugerenciaNotita = function(id) { sugerenciasNotitas = sugerenciasNotitas.filter(s => s.id !== id); guardarEnNube(); };
+        function renderizarSugerenciasNotitas() {
+            const cont = document.getElementById('contenedorNotitasSugerencias'); if(!cont) return; cont.innerHTML = '';
+            sugerenciasNotitas.forEach(s => {
+                const d = document.createElement('div'); d.style.cssText = "background: #fffde7; border: 1px solid #fde047; border-left: 4px solid #eab308; padding: 10px; border-radius: 8px; font-size: 12px; display:flex; justify-content:space-between; align-items:center;";
+                d.innerHTML = `<div><strong style="color:#a16207;">Sugerencia (${s.fecha}):</strong><br><span style="color:#475569;">${s.texto}</span></div> <button class="btn-eliminar" style="height:fit-content; padding:4px 8px;" onclick="eliminarSugerenciaNotita('${s.id}')">🗑️</button>`;
+                cont.appendChild(d);
+            });
+        }
+
         function procesarTextoPedido(textoRaw) {
             let t = textoRaw.replace(/medio\s*1\/2/gi, '1/2').replace(/1\/2\s*medio/gi, '1/2');
-            const patronSeparaSinComa = /([a-zA-Z"”\'])\s+(?=(?:\d+\s*(?:kg|kilos?|g|gr|unid|unidades?|un|lt|litros?|pack|saq)|medio\s*(?:kilo|kg)|1\/2\s*(?:kilo|kg)|\d+\s*kilo))\b/gi;
-            t = t.replace(patronSeparaSinComa, '$1, ');
-
-            let lineas = t.split(/[,\n]+/);
-            let productosValidos = [];
-
+            t = t.replace(/([a-zA-Z"”\'])\s+(?=(?:\d+\s*(?:kg|kilos?|g|gr|unid|unidades?|un|lt|litros?|pack|saq)|medio\s*(?:kilo|kg)|1\/2\s*(?:kilo|kg)|\d+\s*kilo))\b/gi, '$1, ');
+            let lineas = t.split(/[,\n]+/); let productosValidos = [];
             lineas.forEach(linea => {
-                let txt = linea.trim();
-                let txtLower = normalizarTexto(txt);
+                let txt = linea.trim(); let txtLower = normalizarTexto(txt);
                 if (!txt) return;
-
-                let tieneUnidad = /(\d+|1\/2|1\/4|medio|kg|kilo|gr|g|litro|lt|pack|unidades?)/i.test(txtLower);
-                if (tieneUnidad || txt.length > 3) {
+                if (/(\d+|1\/2|1\/4|medio|kg|kilo|gr|g|litro|lt|pack|unidades?)/i.test(txtLower) || txt.length > 3) {
                     productosValidos.push(txt.replace(/\bkilos?\b/gi, 'kg'));
                 }
             });
-
             return { productos: productosValidos };
         }
 
@@ -909,217 +710,39 @@
             const tipoCliente = document.getElementById('tipoClientePedido').value;
             const descEfectivo = document.getElementById('descEfectivoPedido').checked;
             const textoRaw = document.getElementById('textoPedido').value;
-            let notaManual = document.getElementById('notaGeneralPedido').value.trim();
-            
-            if (!textoRaw.trim()) { alert("Por favor, ingresa los productos del pedido."); return; }
-
+            const notaManual = document.getElementById('notaGeneralPedido').value.trim();
+            if (!textoRaw.trim()) { alert("Ingresa los productos."); return; }
             const resultado = procesarTextoPedido(textoRaw);
-            const now = new Date();
-            const fechaFormateada = now.toLocaleDateString('es-AR') + ' ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' hs';
-
-            const items = resultado.productos.map(prodText => ({
-                idItem: Date.now().toString() + Math.random().toString(36).substr(2, 4),
-                texto: prodText, marcado: false, nota: '', soloTengo: '', reemplazo: '', separaciones: []
-            }));
-
+            const items = resultado.productos.map(p => ({ idItem: Date.now().toString()+Math.random().toString(36).substr(2,4), texto: p, marcado: false, nota: '', soloTengo: '', reemplazo: '', separaciones: [] }));
             if (items.length > 0) {
                 pedidos.push({
-                    id: Date.now().toString(), nombre, sucursal, tipoCliente, descEfectivo,
-                    notaGeneral: notaManual, fechaCreacion: fechaFormateada, armador: '', entregador: '',
-                    tickCompletado: false, tickEntregado: false, archivado: false, items, textoFaltantesGuardado: '', minimizado: false, remitoPdf: null
+                    id: Date.now().toString(), nombre, sucursal, tipoCliente, descEfectivo, notaGeneral: notaManual,
+                    fechaCreacion: new Date().toLocaleString('es-AR'), armador: '', entregador: '', tickCompletado: false, tickEntregado: false, archivado: false, items, textoFaltantesGuardado: '', minimizado: false, remitoPdf: null
                 });
-                
-                guardarEnNube();
-                document.getElementById('nombrePedido').value = '';
-                document.getElementById('textoPedido').value = '';
-                document.getElementById('notaGeneralPedido').value = '';
-                document.getElementById('descEfectivoPedido').checked = false;
+                guardarEnNube(); document.getElementById('nombrePedido').value=''; document.getElementById('textoPedido').value=''; document.getElementById('notaGeneralPedido').value=''; document.getElementById('descEfectivoPedido').checked=false;
             }
         };
 
-        window.renderizarPedidos = function() {
-            const contenedor = document.getElementById('contenedorPedidos');
-            if (!contenedor) return;
-            contenedor.innerHTML = ''; 
-
-            const queryBuscador = normalizarTexto(document.getElementById('buscadorPedidosInput').value);
-
-            if (sucursalActiva === 'INICIO_HUB') return;
-            if (sucursalActiva === 'FALTANTES_PEDIDOS') { renderizarFaltantesDePedidosEspecificos(contenedor); return; }
-            if (sucursalActiva === 'FALTANTES_SUCURSAL') { renderizarFaltantesPorSucursal(contenedor); return; }
-            if (sucursalActiva === 'FALTANTES_COMPARTIDOS') { renderizarFaltantesCompartidos(contenedor); return; }
-            if (sucursalActiva === 'CATALOGO_PRODUCTOS') { renderizarCatalogoProductos(contenedor); return; }
-            if (sucursalActiva === 'GESTION_CUENTAS') { renderizarGestionCuentas(contenedor); return; }
-
-            const pedidosFiltrados = pedidos.filter(p => {
-                const coincideNombre = normalizarTexto(p.nombre).includes(queryBuscador);
-                if (sucursalActiva === 'PEDIDOS_ARCHIVADOS') return p.archivado === true && coincideNombre;
-                if (p.archivado) return false;
-                if (sucursalActiva === 'Todos') return coincideNombre;
-                return p.sucursal === sucursalActiva && coincideNombre;
-            });
-
-            if (pedidosFiltrados.length === 0) {
-                contenedor.innerHTML = `<p style="color: #718096; font-style: italic; width: 100%;">No se encontraron pedidos en esta vista.</p>`;
-                return;
+        window.agregarSeparacionMulti = function(idPedido, idItem) {
+            const suc = document.getElementById(`suc-sep-${idItem}`).value;
+            const cant = document.getElementById(`cant-sep-${idItem}`).value.trim();
+            if (!cant) { alert("Ingresa la cantidad (Ej: 500g)."); return; }
+            const p = pedidos.find(p => p.id === idPedido);
+            if (p) {
+                const i = p.items.find(i => i.idItem === idItem);
+                if (i) { if (!i.separaciones) i.separaciones = []; i.separaciones.push({ sucursal: suc, cantidad: cant }); guardarEnNube(); }
             }
-
-            pedidosFiltrados.forEach((pedido) => {
-                const divPostIt = document.createElement('div');
-                divPostIt.className = `post-it ${pedido.minimizado ? 'completado' : ''}`;
-                
-                const header = document.createElement('div');
-                header.className = 'post-it-header';
-                
-                header.innerHTML = `
-                    <div class="header-top">
-                        <h3>
-                            ${pedido.nombre} 
-                            <span class="badge-tipo-cliente">${pedido.tipoCliente || 'Consumidor Final'}</span>
-                            ${pedido.descEfectivo ? `<span class="badge-efectivo">💵 Desc. Efectivo</span>` : ''}
-                            <span style="font-size:11px; color:#e65100; font-weight:600; display:block; margin-top:2px;">📍 Sucursal: ${pedido.sucursal}</span>
-                            <span class="badge-fecha">📅 ${pedido.fechaCreacion || 'S/F'}</span>
-                        </h3>
-                        <div style="display:flex; gap:3px;">
-                            <button class="btn-accion" onclick="toggleMinimizar('${pedido.id}')">${pedido.minimizado ? '🔽' : '🔼'}</button>
-                            <button class="btn-archivar" title="${pedido.archivado ? 'Desarchivar' : 'Archivar'}" onclick="toggleArchivar('${pedido.id}')">${pedido.archivado ? '📤' : '📂'}</button>
-                            <button class="btn-eliminar" title="Eliminar definitivamente" onclick="eliminarPedido('${pedido.id}')">🗑️</button>
-                        </div>
-                    </div>
-                `;
-
-                const divPersonal = document.createElement('div');
-                divPersonal.className = 'personal-row';
-                
-                const colArma = document.createElement('div');
-                colArma.innerHTML = `<label>Armado por (*):</label>`;
-                const selectArma = document.createElement('select');
-                selectArma.innerHTML = `<option value="">-- Seleccionar --</option>`;
-                empleados.forEach(emp => { selectArma.innerHTML += `<option value="${emp}" ${pedido.armador === emp ? 'selected' : ''}>${emp}</option>`; });
-                selectArma.onchange = (e) => { pedido.armador = e.target.value; guardarEnNube(); };
-                colArma.appendChild(selectArma);
-
-                const colEntrega = document.createElement('div');
-                colEntrega.innerHTML = `<label>Entregado por:</label>`;
-                const selectEntrega = document.createElement('select');
-                selectEntrega.innerHTML = `<option value="">-- Seleccionar --</option>`;
-                empleados.forEach(emp => { selectEntrega.innerHTML += `<option value="${emp}" ${pedido.entregador === emp ? 'selected' : ''}>${emp}</option>`; });
-                selectEntrega.onchange = (e) => { pedido.entregador = e.target.value; guardarEnNube(); };
-                colEntrega.appendChild(selectEntrega);
-
-                divPersonal.appendChild(colArma); divPersonal.appendChild(colEntrega);
-                header.appendChild(divPersonal);
-
-                const divTicks = document.createElement('div');
-                divTicks.className = 'estado-checks';
-                divTicks.innerHTML = `
-                    <div class="estado-linea"><label><input type="checkbox" id="chk-comp-${pedido.id}" ${pedido.tickCompletado ? 'checked' : ''}> ✅ Completado</label></div>
-                    <div class="estado-linea"><label><input type="checkbox" id="chk-entr-${pedido.id}" ${pedido.tickEntregado ? 'checked' : ''}> 📦 Entregado</label></div>
-                `;
-                
-                header.appendChild(divTicks);
-                divPostIt.appendChild(header);
-
-                setTimeout(() => {
-                    const elChkComp = document.getElementById(`chk-comp-${pedido.id}`);
-                    const elChkEntr = document.getElementById(`chk-entr-${pedido.id}`);
-                    if (elChkComp) {
-                        elChkComp.onchange = (e) => {
-                            if (e.target.checked && (!pedido.armador || pedido.armador.trim() === '')) {
-                                alert("⚠️ Debes seleccionar primero el empleado que lo empaquetó ('Armado por').");
-                                e.target.checked = false;
-                                return;
-                            }
-                            pedido.tickCompletado = e.target.checked;
-                            guardarEnNube();
-                        };
-                    }
-                    if (elChkEntr) {
-                        elChkEntr.onchange = (e) => { pedido.tickEntregado = e.target.checked; guardarEnNube(); };
-                    }
-                }, 0);
-
-                const body = document.createElement('div');
-                body.className = 'post-it-body';
-                if (pedido.minimizado) body.style.display = 'none';
-
-                if (pedido.notaGeneral) {
-                    const divNotaG = document.createElement('div');
-                    divNotaG.className = 'nota-general-pedido';
-                    divNotaG.innerHTML = `📌 <b>Nota:</b> ${pedido.notaGeneral}`;
-                    body.appendChild(divNotaG);
-                }
-
-                const ul = document.createElement('ul');
-                ul.className = 'lista-items';
-
-                pedido.items.forEach((item) => {
-                    const li = document.createElement('li');
-                    li.className = `item-row ${item.marcado ? 'marcado' : ''}`;
-                    
-                    const check = document.createElement('input');
-                    check.type = 'checkbox'; check.checked = item.marcado;
-                    check.onchange = (e) => { item.marcado = e.target.checked; guardarEnNube(); };
-
-                    const spanText = document.createElement('span');
-                    spanText.className = 'item-texto'; spanText.textContent = item.texto;
-
-                    const inputSoloTengo = document.createElement('input');
-                    inputSoloTengo.type = 'text'; inputSoloTengo.className = 'item-parcial';
-                    inputSoloTengo.placeholder = 'Solo tengo...'; inputSoloTengo.value = item.soloTengo || '';
-                    inputSoloTengo.onchange = (e) => { item.soloTengo = e.target.value; guardarEnNube(); };
-
-                    const inputReemplazo = document.createElement('input');
-                    inputReemplazo.type = 'text'; inputReemplazo.className = 'item-reemplazo';
-                    inputReemplazo.placeholder = 'Reemplazo...'; inputReemplazo.value = item.reemplazo || '';
-                    inputReemplazo.onchange = (e) => { item.reemplazo = e.target.value; guardarEnNube(); };
-
-                    const inputNota = document.createElement('input');
-                    inputNota.type = 'text'; inputNota.className = 'item-nota';
-                    inputNota.placeholder = 'Nota...'; inputNota.value = item.nota || '';
-                    inputNota.onchange = (e) => { item.nota = e.target.value; guardarEnNube(); };
-
-                    li.appendChild(check); li.appendChild(spanText);
-                    li.appendChild(inputSoloTengo); li.appendChild(inputReemplazo); li.appendChild(inputNota);
-                    ul.appendChild(li);
-                });
-
-                body.appendChild(ul);
-
-                const divFaltantes = document.createElement('div');
-                divFaltantes.className = 'seccion-faltantes';
-                divFaltantes.innerHTML = `
-                    <label>
-                        <span>FALTANTES Y REEMPLAZOS:</span>
-                        <button type="button" class="btn-accion" style="padding:2px 5px; font-size:10px;" onclick="copiarTextoArea('faltantes-${pedido.id}')">📋 Copiar</button>
-                    </label>
-                    <textarea class="caja-faltantes" id="faltantes-${pedido.id}" onchange="guardarTextoFaltantes('${pedido.id}', this.value)">${pedido.textoFaltantesGuardado || ''}</textarea>
-                    <button class="btn-accion" style="width:100%; background:#2e7d32; font-size:12px; padding:5px;" onclick="generarFaltantes('${pedido.id}')">Recopilar Faltantes</button>
-                `;
-                
-                body.appendChild(divFaltantes);
-                divPostIt.appendChild(body);
-                contenedor.appendChild(divPostIt);
-            });
         };
 
-        window.toggleArchivar = function(id) {
-            const pedido = pedidos.find(p => p.id === id);
-            if (pedido) { pedido.archivado = !pedido.archivado; guardarEnNube(); }
+        window.quitarSeparacionMulti = function(idPedido, idItem, index) {
+            const p = pedidos.find(p => p.id === idPedido);
+            if (p) { const i = p.items.find(i => i.idItem === idItem); if (i && i.separaciones) { i.separaciones.splice(index, 1); guardarEnNube(); } }
         };
 
         function renderizarFaltantesPorSucursal(contenedor) {
             let faltantesSet = { 'Maipu': new Set(), 'Mendoza': new Set(), 'Chango Mas': new Set() };
-
-            pedidos.forEach(p => {
-                p.items.forEach(i => {
-                    if (!i.marcado) {
-                        let nombreLimpio = extraerNombreSinCantidad(i.texto);
-                        faltantesSet[p.sucursal].add(nombreLimpio);
-                    }
-                });
-            });
-
+            pedidos.forEach(p => { p.items.forEach(i => { if (!i.marcado) { let nombreLimpio = extraerNombreSinCantidad(i.texto); faltantesSet[p.sucursal].add(nombreLimpio); } }); });
+            
             const grid = document.createElement('div');
             grid.className = 'contenedor-faltantes-grid';
             grid.innerHTML = `
@@ -1144,26 +767,15 @@
 
         function renderizarFaltantesCompartidos(contenedor) {
             let concurrenciaFaltante = {};
-
-            pedidos.forEach(p => {
-                p.items.forEach(i => {
-                    let nombreLimpio = normalizarTexto(extraerNombreSinCantidad(i.texto));
-                    if (!concurrenciaFaltante[nombreLimpio]) {
-                        concurrenciaFaltante[nombreLimpio] = { nombreOriginal: extraerNombreSinCantidad(i.texto), sucursalesFalta: new Set() };
-                    }
-                    if (!i.marcado) {
-                        concurrenciaFaltante[nombreLimpio].sucursalesFalta.add(p.sucursal);
-                    }
-                });
-            });
-
+            pedidos.forEach(p => { p.items.forEach(i => {
+                let nombreLimpio = normalizarTexto(extraerNombreSinCantidad(i.texto));
+                if (!concurrenciaFaltante[nombreLimpio]) { concurrenciaFaltante[nombreLimpio] = { nombreOriginal: extraerNombreSinCantidad(i.texto), sucursalesFalta: new Set() }; }
+                if (!i.marcado) { concurrenciaFaltante[nombreLimpio].sucursalesFalta.add(p.sucursal); }
+            }); });
+            
             let listaGlobalLimpia = [];
-            Object.values(concurrenciaFaltante).forEach(obj => {
-                if (obj.sucursalesFalta.size >= 2) {
-                    listaGlobalLimpia.push(`- ${obj.nombreOriginal}`);
-                }
-            });
-
+            Object.values(concurrenciaFaltante).forEach(obj => { if (obj.sucursalesFalta.size >= 2) { listaGlobalLimpia.push(`- ${obj.nombreOriginal}`); } });
+            
             const grid = document.createElement('div');
             grid.className = 'contenedor-faltantes-grid';
             grid.innerHTML = `
@@ -1177,8 +789,7 @@
         }
 
         window.guardarFaltanteTextoManual = function(tipo, valor) {
-            faltantesEspecialesGuardados[tipo] = valor;
-            guardarEnNube();
+            faltantesEspecialesGuardados[tipo] = valor; guardarEnNube();
         };
 
         window.filtrarCajaFaltante = function(idTextarea, idBuscador) {
@@ -1190,6 +801,214 @@
             area.value = filtradas.join('\n') || 'Sin coincidencias.';
         };
 
+        window.procesarArchivoCatalogo = async function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const ext = file.name.split('.').pop().toLowerCase();
+            let nuevosItemsEncontrados = [];
+
+            try {
+                if (ext === 'xlsx' || ext === 'xls' || ext === 'csv') {
+                    const data = await file.arrayBuffer();
+                    const workbook = XLSX.read(data);
+                    const firstSheet = workbook.SheetNames[0];
+                    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], { header: 1 });
+                    
+                    rows.forEach(row => {
+                        row.forEach(cell => {
+                            if (cell && typeof cell === 'string' && cell.trim().length > 2) {
+                                let val = cell.trim();
+                                if (!nuevosItemsEncontrados.includes(val) && !/^(precio|codigo|stock|cantidad|id)$/i.test(val)) {
+                                    nuevosItemsEncontrados.push(val);
+                                }
+                            }
+                        });
+                    });
+                } else if (ext === 'pdf') {
+                    const data = await file.arrayBuffer();
+                    const loadingTask = pdfjsLib.getDocument({ data });
+                    const pdfDoc = await loadingTask.promise;
+                    
+                    for (let i = 1; i <= pdfDoc.numPages; i++) {
+                        const page = await pdfDoc.getPage(i);
+                        const textContent = await page.getTextContent();
+                        textContent.items.forEach(item => {
+                            let val = item.str.trim();
+                            if (val.length > 2 && !nuevosItemsEncontrados.includes(val) && !/^(precio|codigo|stock|cantidad|id)$/i.test(val)) {
+                                nuevosItemsEncontrados.push(val);
+                            }
+                        });
+                    }
+                } else {
+                    alert("Formato no soportado. Sube un archivo Excel (.xlsx, .xls), CSV o PDF.");
+                    return;
+                }
+
+                if (nuevosItemsEncontrados.length === 0) {
+                    alert("No se encontraron productos legibles en el documento.");
+                    return;
+                }
+
+                let agregadosCount = 0;
+                let actualizadosCount = 0;
+
+                nuevosItemsEncontrados.forEach(nuevoProd => {
+                    let indexExistente = catalogoProductos.findIndex(p => normalizarTexto(p) === normalizarTexto(nuevoProd));
+                    if (indexExistente >= 0) {
+                        catalogoProductos[indexExistente] = nuevoProd;
+                        actualizadosCount++;
+                    } else {
+                        catalogoProductos.push(nuevoProd);
+                        agregadosCount++;
+                    }
+                });
+
+                guardarEnNube();
+                alert(`✅ Lectura completada con éxito:\n- ${agregadosCount} productos nuevos añadidos.\n- ${actualizadosCount} productos actualizados/sincronizados.`);
+                renderizarPedidos();
+            } catch (err) {
+                console.error(err);
+                alert("Ocurrió un error al leer el archivo. Revisa la consola.");
+            }
+        };
+
+        window.agregarProductoCatalogo = function() {
+            const input = document.getElementById('nuevoProductoNombre');
+            const nombre = input.value.trim();
+            if (nombre) {
+                if (catalogoProductos.some(p => normalizarTexto(p) === normalizarTexto(nombre))) { alert("El producto ya existe."); return; }
+                catalogoProductos.push(nombre); input.value = ''; guardarEnNube();
+            }
+        };
+
+        window.modificarProductoCatalogo = function(idx) {
+            const prodActual = catalogoProductos[idx];
+            const nuevoNombre = prompt("Modificar producto:", prodActual);
+            if (nuevoNombre && nuevoNombre.trim() !== '') { catalogoProductos[idx] = nuevoNombre.trim(); guardarEnNube(); }
+        };
+
+        window.eliminarProductoCatalogo = function(idx) {
+            if (confirm(`¿Eliminar "${catalogoProductos[idx]}" del catálogo?`)) { catalogoProductos.splice(idx, 1); guardarEnNube(); }
+        };
+
+        window.agregarProductoAlArmador = function(nombreProd) {
+            const areaTexto = document.getElementById('textoPedido');
+            let esEmpaquetadoUnidad = /(gr|ml|lt|saq|pack|alfajor|barra|promo)/i.test(nombreProd);
+            let formatoAgregado = esEmpaquetadoUnidad ? `1 un - ${nombreProd}` : `1 kg ${nombreProd}`;
+            areaTexto.value = areaTexto.value.trim() ? areaTexto.value + `\n${formatoAgregado}` : formatoAgregado;
+            alert(`✅ Se agregó "${formatoAgregado}" al armador de pedidos.`);
+        };
+
+        window.filtrarTablaCatalogo = function() {
+            const query = normalizarTexto(document.getElementById('busc-catalogo').value);
+            const rows = document.querySelectorAll('#tablaCatalogo tbody tr');
+            rows.forEach(row => { row.style.display = normalizarTexto(row.cells[0].textContent).includes(query) ? '' : 'none'; });
+        };
+
+        function renderizarCatalogoProductos(contenedor) {
+            const box = document.createElement('div');
+            box.className = 'box-productos-catalogo';
+            box.innerHTML = `
+                <h3 style="color:#0d9488; margin-top:0;">📦 CATÁLOGO DE PRODUCTOS Y LECTOR MASIVO (${catalogoProductos.length} ítems)</h3>
+                
+                <div class="upload-drop-zone" onclick="document.getElementById('fileInputLector').click()">
+                    <span style="font-size: 24px;">📁</span>
+                    <p style="margin: 5px 0 0 0; font-size: 13px; font-weight: 600; color: #0d9488;">Haz clic aquí o sube un documento PDF, Excel (.xlsx, .xls) o CSV</p>
+                    <span style="font-size: 11px; color: #64748b;">El lector extraerá y actualizará todos los productos automáticamente.</span>
+                    <input type="file" id="fileInputLector" style="display:none;" accept=".xlsx, .xls, .csv, .pdf" onchange="procesarArchivoCatalogo(event)">
+                </div>
+
+                <div style="display:flex; gap:8px; margin-bottom:12px;">
+                    <input type="text" id="nuevoProductoNombre" class="input-nombre" placeholder="Nombre del nuevo producto..." style="font-size:12px; cursor:pointer;">
+                    <button class="btn-verde" onclick="agregarProductoCatalogo()">➕ Añadir al Catálogo</button>
+                </div>
+
+                <input type="text" class="buscador-caja" id="busc-catalogo" placeholder="🔍 Buscar producto en el catálogo..." oninput="filtrarTablaCatalogo()">
+                
+                <div style="max-height:400px; overflow-y:auto;">
+                    <table class="tabla-productos" id="tablaCatalogo">
+                        <thead>
+                            <tr>
+                                <th>Descripción del Producto</th>
+                                <th style="width:220px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${catalogoProductos.map((prod, idx) => `
+                                <tr>
+                                    <td>${prod}</td>
+                                    <td style="display:flex; gap:4px;">
+                                        <button class="btn-verde" style="padding:4px 8px; font-size:10px;" onclick="agregarProductoAlArmador('${prod.replace(/'/g, "\\'")}')">➕ Agregar</button>
+                                        <button class="btn-accion" style="padding:4px 8px; font-size:10px;" onclick="modificarProductoCatalogo(${idx})">✏️ Modificar</button>
+                                        <button class="btn-eliminar" style="padding:4px 8px; font-size:10px;" onclick="eliminarProductoCatalogo(${idx})">🗑️ Borrar</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            contenedor.appendChild(box);
+        }
+
+        window.editarUsuarioCuenta = function(idx) {
+            const u = chatUsuarios[idx];
+            const nuevoNombre = prompt("Nuevo nombre de usuario:", u.user);
+            if (nuevoNombre && nuevoNombre.trim() !== '') { chatUsuarios[idx].user = nuevoNombre.trim(); guardarEnNube(); alert("Nombre de usuario actualizado."); }
+        };
+
+        window.editarPasswordCuenta = function(idx) {
+            const u = chatUsuarios[idx];
+            const nuevaPass = prompt(`Nueva contraseña para ${u.user}:`, u.pass);
+            if (nuevaPass && nuevaPass.trim() !== '') { chatUsuarios[idx].pass = nuevaPass.trim(); guardarEnNube(); alert("Contraseña actualizada correctamente."); }
+        };
+
+        window.eliminarUsuarioCuenta = function(idx) {
+            if (confirm(`¿Eliminar la cuenta de ${chatUsuarios[idx].user}?`)) { chatUsuarios.splice(idx, 1); guardarEnNube(); }
+        };
+
+        function renderizarGestionCuentas(contenedor) {
+            if (!usuarioSesionActiva || !usuarioSesionActiva.isAdmin) {
+                contenedor.innerHTML = `<p style="color:red; font-weight:bold; padding: 20px;">Acceso denegado. Se requieren permisos de Administrador.</p>`;
+                return;
+            }
+
+            const box = document.createElement('div');
+            box.className = 'box-gestion-cuentas';
+            box.innerHTML = `
+                <h3 style="color:#d97706; margin-top:0;">⚙️ GESTIÓN DE CUENTAS DE USUARIOS</h3>
+                <p style="font-size:11px; color:#718096;">Edita el nombre de usuario o restablece la contraseña de cualquier cuenta registrada.</p>
+
+                <div style="max-height:450px; overflow-y:auto;">
+                    <table class="tabla-cuentas">
+                        <thead>
+                            <tr>
+                                <th>Usuario</th>
+                                <th>Sucursal</th>
+                                <th>Rol</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${chatUsuarios.map((u, idx) => `
+                                <tr>
+                                    <td><b>${u.user}</b></td>
+                                    <td>${u.sucursal}</td>
+                                    <td>${u.isAdmin ? '👑 Admin' : '👤 Usuario'}</td>
+                                    <td style="display:flex; gap:5px;">
+                                        <button class="btn-accion" style="padding:4px 8px; font-size:10px;" onclick="editarUsuarioCuenta(${idx})">✏️ Nombre</button>
+                                        <button class="btn-archivar" style="padding:4px 8px; font-size:10px;" onclick="editarPasswordCuenta(${idx})">🔑 Contraseña</button>
+                                        ${!u.isAdmin ? `<button class="btn-eliminar" style="padding:4px 8px; font-size:10px;" onclick="eliminarUsuarioCuenta(${idx})">🗑️</button>` : ''}
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            contenedor.appendChild(box);
+        }
+
         function renderizarFaltantesDePedidosEspecificos(contenedor) {
             let hayFaltantes = false;
             pedidos.forEach(pedido => {
@@ -1198,88 +1017,189 @@
                     if (faltantesDelPedido.length > 0) {
                         hayFaltantes = true;
                         const divPostIt = document.createElement('div');
-                        divPostIt.className = 'post-it'; divPostIt.style.borderLeft = '5px solid #e65100';
-                        divPostIt.innerHTML = `<div class="post-it-header" style="background:#fff3e0;"><h3 style="color:#e65100;">${pedido.nombre} <span>📍 Origen: ${pedido.sucursal}</span></h3></div>`;
-                        const body = document.createElement('div'); body.className = 'post-it-body';
+                        divPostIt.className = 'post-it';
+                        divPostIt.style.borderLeft = '6px solid #ea580c';
+
+                        divPostIt.innerHTML = `
+                            <div class="post-it-header" style="background:#fff7ed; border-bottom: 1px solid #ffedd5;">
+                                <h3 style="color:#c2410c;">${pedido.nombre} <span style="font-size:12px; font-weight:600; color:#ea580c; display:block; margin-top:4px;">📍 Origen: ${pedido.sucursal}</span></h3>
+                            </div>
+                        `;
+
+                        const body = document.createElement('div');
+                        body.className = 'post-it-body';
+
                         faltantesDelPedido.forEach(item => {
-                            const card = document.createElement('div'); card.className = 'card-faltante-item';
-                            card.innerHTML = `<div style="font-size:12px; font-weight:bold; color:#2d3748;">- ${item.texto}</div>`;
+                            const card = document.createElement('div');
+                            card.className = 'card-faltante-item';
+                            card.innerHTML = `
+                                <div style="font-size:13px; font-weight:700; color:#334155;">- ${item.texto}</div>
+                                <div class="card-faltante-row">
+                                    <span>Asignar separación:</span>
+                                    <select id="suc-sep-${item.idItem}">
+                                        <option value="Maipu">Maipu</option>
+                                        <option value="Mendoza">Mendoza</option>
+                                        <option value="Chango Mas">Chango Mas</option>
+                                    </select>
+                                    <input type="text" id="cant-sep-${item.idItem}" placeholder="Cant. (500g)">
+                                    <button class="btn-verde" style="padding:4px 8px; font-size:11px;" onclick="agregarSeparacionMulti('${pedido.id}', '${item.idItem}')">➕</button>
+                                </div>
+                            `;
+
+                            if (item.separaciones && item.separaciones.length > 0) {
+                                const ulS = document.createElement('ul');
+                                ulS.style.cssText = 'margin:6px 0 0 0; padding-left:18px; font-size:11px; color:#16a34a; font-weight: 600;';
+                                item.separaciones.forEach((s, idx) => {
+                                    ulS.innerHTML += `<li>${s.sucursal} separa <b style="color:#15803d;">${s.cantidad}</b> <span style="color:#dc2626; cursor:pointer; margin-left:5px;" onclick="quitarSeparacionMulti('${pedido.id}', '${item.idItem}', ${idx})">❌</span></li>`;
+                                });
+                                card.appendChild(ulS);
+                            }
                             body.appendChild(card);
                         });
-                        divPostIt.appendChild(body); contenedor.appendChild(divPostIt);
+                        divPostIt.appendChild(body);
+                        contenedor.appendChild(divPostIt);
                     }
                 }
             });
-            if (!hayFaltantes) contenedor.innerHTML = `<p style="color: #2e7d32; font-weight: bold; width: 100%;">🎉 No hay faltantes en los pedidos completados activos.</p>`;
+            if (!hayFaltantes) contenedor.innerHTML = `<p style="color: #16a34a; font-weight: 700; width: 100%; text-align:center; padding: 20px;">🎉 No hay faltantes en los pedidos completados activos.</p>`;
         }
 
-        window.copiarTextoArea = function(idArea) {
-            const area = document.getElementById(idArea);
-            if (area && area.value) { area.select(); navigator.clipboard.writeText(area.value); alert("📋 ¡Copiado al portapapeles!"); }
-        };
+        window.renderizarPedidos = function() {
+            const cont = document.getElementById('contenedorPedidos'); if (!cont) return; cont.innerHTML = ''; 
+            const q = normalizarTexto(document.getElementById('buscadorPedidosInput').value);
 
-        window.guardarTextoFaltantes = function(idPedido, valor) {
-            const pedido = pedidos.find(p => p.id === idPedido);
-            if (pedido) { pedido.textoFaltantesGuardado = valor; guardarEnNube(); }
-        };
+            if (sucursalActiva === 'INICIO_HUB') return;
+            if (sucursalActiva === 'FALTANTES_PEDIDOS') { renderizarFaltantesDePedidosEspecificos(cont); return; }
+            if (sucursalActiva === 'FALTANTES_SUCURSAL') { renderizarFaltantesPorSucursal(cont); return; }
+            if (sucursalActiva === 'FALTANTES_COMPARTIDOS') { renderizarFaltantesCompartidos(cont); return; }
+            if (sucursalActiva === 'CATALOGO_PRODUCTOS') { renderizarCatalogoProductos(cont); return; }
+            if (sucursalActiva === 'GESTION_CUENTAS') { renderizarGestionCuentas(cont); return; }
 
-        // CHAT GLOBAL
-        window.enviarMensajeChat = function() {
-            const txtInput = document.getElementById('chatInputMsg');
-            const texto = txtInput.value.trim();
-            if (texto && usuarioSesionActiva) {
-                chatMensajes.push({
-                    id: Date.now().toString(), user: usuarioSesionActiva.user, sucursal: usuarioSesionActiva.sucursal,
-                    texto: texto, fecha: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                });
-                guardarEnNube(); 
-                txtInput.value = '';
-            }
-        };
-
-        function renderizarMensajesChat() {
-            const box = document.getElementById('chatMessagesBox');
-            if (!box) return;
-            box.innerHTML = '';
-            chatMensajes.forEach(msg => {
-                const div = document.createElement('div');
-                div.className = 'msg-item';
-                let classTag = msg.sucursal === 'Mendoza' ? 'tag-mendoza' : (msg.sucursal === 'Chango Mas' ? 'tag-chango' : 'tag-maipu');
-                let acciones = (usuarioSesionActiva && usuarioSesionActiva.isAdmin) ? `<span class="msg-actions" onclick="borrarMsgChat('${msg.id}')">🗑️</span>` : '';
-                div.innerHTML = `<span class="tag-suc ${classTag}">(${msg.sucursal})</span><b>${msg.user}:</b> ${msg.texto} <span style="font-size:8px; color:#a0aec0;">${msg.fecha}</span>${acciones}`;
-                box.appendChild(div);
+            const filtrados = pedidos.filter(p => {
+                const c = normalizarTexto(p.nombre).includes(q);
+                if (sucursalActiva === 'PEDIDOS_ARCHIVADOS') return p.archivado && c;
+                if (p.archivado) return false;
+                if (sucursalActiva === 'Todos') return c; return p.sucursal === sucursalActiva && c;
             });
-            box.scrollTop = box.scrollHeight;
-        }
+            if (filtrados.length === 0) return;
 
-        window.borrarMsgChat = function(idMsg) { chatMensajes = chatMensajes.filter(m => m.id !== idMsg); guardarEnNube(); };
+            filtrados.forEach((pedido) => {
+                const div = document.createElement('div'); div.className = `post-it ${pedido.minimizado ? 'completado' : ''}`;
+                const head = document.createElement('div'); head.className = 'post-it-header';
+                head.innerHTML = `
+                    <div class="header-top">
+                        <h3>${pedido.nombre} <span class="badge-tipo-cliente">${pedido.tipoCliente}</span>${pedido.descEfectivo ? `<span class="badge-efectivo">💵 Efectivo</span>` : ''}
+                        <span class="badge-fecha" style="color:#ea580c;">📍 Sucursal: ${pedido.sucursal}</span><span class="badge-fecha">📅 ${pedido.fechaCreacion}</span></h3>
+                        <div style="display:flex; gap:4px;">
+                            <button class="btn-accion" onclick="toggleMinimizar('${pedido.id}')">${pedido.minimizado ? '🔽' : '🔼'}</button>
+                            <button class="btn-archivar" onclick="toggleArchivar('${pedido.id}')">${pedido.archivado ? '📤' : '📂'}</button>
+                            <button class="btn-eliminar" onclick="eliminarPedido('${pedido.id}')">🗑️</button>
+                        </div>
+                    </div>
+                    <div class="personal-row">
+                        <div><label>Armado por (*):</label><select onchange="actualizarArmador('${pedido.id}', this.value)"><option value="">-- Seleccionar --</option>${empleados.map(e=>`<option value="${e}" ${pedido.armador===e?'selected':''}>${e}</option>`).join('')}</select></div>
+                        <div><label>Entregado por:</label><select onchange="actualizarEntregador('${pedido.id}', this.value)"><option value="">-- Seleccionar --</option>${empleados.map(e=>`<option value="${e}" ${pedido.entregador===e?'selected':''}>${e}</option>`).join('')}</select></div>
+                    </div>
+                    <div class="estado-checks">
+                        <div class="estado-linea"><label><input type="checkbox" id="chk-c-${pedido.id}" ${pedido.tickCompletado?'checked':''}> ✅ Completado</label></div>
+                        <div class="estado-linea"><label><input type="checkbox" id="chk-e-${pedido.id}" ${pedido.tickEntregado?'checked':''}> 📦 Entregado</label></div>
+                    </div>
+                `;
+                div.appendChild(head);
 
-        window.toggleMinimizar = function(id) {
-            const pedido = pedidos.find(p => p.id === id);
-            if (pedido) { pedido.minimizado = !pedido.minimizado; guardarEnNube(); }
+                setTimeout(() => {
+                    document.getElementById(`chk-c-${pedido.id}`).onchange = (e) => { if(e.target.checked && !pedido.armador){ alert("Selecciona armador."); e.target.checked=false; return; } pedido.tickCompletado=e.target.checked; guardarEnNube(); };
+                    document.getElementById(`chk-e-${pedido.id}`).onchange = (e) => { pedido.tickEntregado=e.target.checked; guardarEnNube(); };
+                }, 0);
+
+                const body = document.createElement('div'); body.className = 'post-it-body'; if(pedido.minimizado) body.style.display='none';
+                if (pedido.notaGeneral) body.innerHTML += `<div style="background:#fff7ed; padding:8px; border-radius:6px; font-size:12px; color:#c2410c; margin-bottom:10px; font-weight:600;">📌 ${pedido.notaGeneral}</div>`;
+                
+                const ul = document.createElement('ul'); ul.className='lista-items';
+                pedido.items.forEach(i => {
+                    const li = document.createElement('li'); li.className = `item-row ${i.marcado?'marcado':''}`;
+                    li.innerHTML = `
+                        <input type="checkbox" ${i.marcado?'checked':''} onchange="marcarItem('${pedido.id}', '${i.idItem}', this.checked)">
+                        <span class="item-texto">${i.texto}</span>
+                        <input type="text" class="item-parcial" placeholder="Solo tengo.." value="${i.soloTengo}" oninput="updateItem('${pedido.id}', '${i.idItem}', 'soloTengo', this.value)">
+                        <input type="text" class="item-reemplazo" placeholder="Reemplazo" value="${i.reemplazo}" oninput="updateItem('${pedido.id}', '${i.idItem}', 'reemplazo', this.value)">
+                        <input type="text" class="item-nota" placeholder="Nota" value="${i.nota}" oninput="updateItem('${pedido.id}', '${i.idItem}', 'nota', this.value)">
+                    `;
+                    ul.appendChild(li);
+                });
+                body.appendChild(ul);
+
+                const itemsConSeparacion = pedido.items.filter(i => i.separaciones && i.separaciones.length > 0);
+                if (itemsConSeparacion.length > 0) {
+                    const divSepara = document.createElement('div');
+                    divSepara.className = 'seccion-separa';
+                    divSepara.innerHTML = `<h4>Separan otras sucursales:</h4>`;
+                    const ulSepara = document.createElement('ul');
+                    itemsConSeparacion.forEach(i => {
+                        i.separaciones.forEach(sep => {
+                            ulSepara.innerHTML += `<li><b style="color:#0f172a;">${i.texto}</b> → <u style="color:#ea580c;">${sep.sucursal}</u> separa: <b style="color:#166534;">${sep.cantidad}</b></li>`;
+                        });
+                    });
+                    divSepara.appendChild(ulSepara);
+                    body.appendChild(divSepara);
+                }
+
+                body.innerHTML += `
+                    <div class="seccion-faltantes">
+                        <label>FALTANTES Y REEMPLAZOS: <button class="btn-accion" style="padding:4px 8px; font-size:10px;" onclick="copiarTextoArea('falt-${pedido.id}')">📋 Copiar</button></label>
+                        <textarea class="caja-faltantes" id="falt-${pedido.id}" oninput="guardarTextoFaltantes('${pedido.id}', this.value)">${pedido.textoFaltantesGuardado || ''}</textarea>
+                        <button class="btn-verde" style="width:100%; padding:8px;" onclick="generarFaltantes('${pedido.id}')">Recopilar Faltantes</button>
+                    </div>
+                `;
+                div.appendChild(body); cont.appendChild(div);
+            });
         };
 
-        window.eliminarPedido = function(id) {
-            if (confirm("¿Borrar definitivamente este pedido de la nube?")) { pedidos = pedidos.filter(p => p.id !== id); guardarEnNube(); }
-        };
-
+        window.actualizarArmador = function(id, val) { const p = pedidos.find(x=>x.id===id); if(p){ p.armador = val; guardarEnNube(); } };
+        window.actualizarEntregador = function(id, val) { const p = pedidos.find(x=>x.id===id); if(p){ p.entregador = val; guardarEnNube(); } };
+        window.marcarItem = function(idP, idI, val) { const p = pedidos.find(x=>x.id===idP); if(p){ const i=p.items.find(x=>x.idItem===idI); if(i){ i.marcado=val; guardarEnNube(); } } };
+        window.updateItem = function(idP, idI, key, val) { const p = pedidos.find(x=>x.id===idP); if(p){ const i=p.items.find(x=>x.idItem===idI); if(i){ i[key]=val; guardarEnNube(); } } };
+        window.toggleMinimizar = function(id) { const p = pedidos.find(x=>x.id===id); if(p){ p.minimizado = !p.minimizado; guardarEnNube(); } };
+        window.toggleArchivar = function(id) { const p = pedidos.find(x=>x.id===id); if(p){ p.archivado = !p.archivado; guardarEnNube(); } };
+        window.eliminarPedido = function(id) { if(confirm("¿Eliminar?")){ pedidos = pedidos.filter(x=>x.id!==id); guardarEnNube(); } };
+        window.copiarTextoArea = function(id) { const a = document.getElementById(id); if(a){ a.select(); navigator.clipboard.writeText(a.value); alert("Copiado!"); } };
+        window.guardarTextoFaltantes = function(id, val) { const p = pedidos.find(x=>x.id===id); if(p){ p.textoFaltantesGuardado = val; guardarEnNube(); } };
+        
         window.generarFaltantes = function(id) {
-            const pedido = pedidos.find(p => p.id === id);
-            if (pedido) {
-                let textoFaltantes = "";
-                pedido.items.forEach(item => {
-                    if (!item.marcado || (item.soloTengo && item.soloTengo.trim() !== '')) {
-                        textoFaltantes += `- ${item.texto}`;
-                        if (item.soloTengo) textoFaltantes += ` (Solo se preparó: ${item.soloTengo})`;
-                        if (item.reemplazo) textoFaltantes += ` [Reemplazo: ${item.reemplazo}]`;
-                        if (item.nota) textoFaltantes += ` [Nota: ${item.nota}]`;
-                        textoFaltantes += "\n";
+            const p = pedidos.find(x=>x.id===id);
+            if(p){
+                let txt = "";
+                p.items.forEach(i => {
+                    if(!i.marcado || i.soloTengo.trim()){
+                        txt += `- ${i.texto}`;
+                        if(i.soloTengo) txt += ` (Solo: ${i.soloTengo})`;
+                        if(i.reemplazo) txt += ` [Rmp: ${i.reemplazo}]`;
+                        if(i.nota) txt += ` [Nota: ${i.nota}]`;
+                        txt += "\n";
                     }
                 });
-                pedido.textoFaltantesGuardado = textoFaltantes || "¡Pedido completo! No falta nada.";
-                guardarEnNube();
+                p.textoFaltantesGuardado = txt || "Completo!"; guardarEnNube();
             }
         };
+
+        window.enviarMensajeChat = function() {
+            const i = document.getElementById('chatInputMsg'); const t = i.value.trim();
+            if(t && usuarioSesionActiva) {
+                chatMensajes.push({ id: Date.now().toString(), user: usuarioSesionActiva.user, sucursal: usuarioSesionActiva.sucursal, texto: t, fecha: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) });
+                guardarEnNube(); i.value='';
+            }
+        };
+        window.renderizarMensajesChat = function() {
+            const b = document.getElementById('chatMessagesBox'); if(!b) return; b.innerHTML='';
+            chatMensajes.forEach(m => {
+                const tag = m.sucursal==='Mendoza'?'tag-mendoza':(m.sucursal==='Chango Mas'?'tag-chango':'tag-maipu');
+                const adminBtn = (usuarioSesionActiva && usuarioSesionActiva.isAdmin) ? `<span style="cursor:pointer; font-size:10px;" onclick="borrarMsg('${m.id}')">🗑️</span>` : '';
+                b.innerHTML += `<div class="msg-item"><span class="tag-suc ${tag}">(${m.sucursal})</span><b>${m.user}:</b> ${m.texto} <span style="font-size:9px; color:#94a3b8;">${m.fecha}</span> ${adminBtn}</div>`;
+            });
+            b.scrollTop = b.scrollHeight;
+        };
+        window.borrarMsg = function(id) { chatMensajes = chatMensajes.filter(m=>m.id!==id); guardarEnNube(); };
+
     </script>
 </body>
 </html>
