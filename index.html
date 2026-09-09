@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Pedidos - Pro v3.0</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f4;
+            color: #2d3748;
+            padding: 15px;
+            margin: 0;
+            width: 100vw;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* BARRA DE FILTROS SUPERIOR */
+        .filtros-sucursal {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+            background: white;
+            padding: 10px 15px;
+            border-radius: 12px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            align-items: center;
+            border-left: 5px solid #2e7d32;
+            flex-wrap: wrap;
+            width: 100%;
+        }
+        .filtros-sucursal span { font-weight: bold; color: #2e7d32; font-size: 13px; margin-right: 5px; }
+        .btn-filtro {
+            background-color: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9;
+            padding: 6px 12px; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 12px; transition: all 0.2s;
+        }
+        .btn-filtro:hover { background-color: #c8e6c9; }
+        .btn-filtro.activo { background-color: #2e7d32; color: white; border-color: #2e7d32; box-shadow: 0 2px 4px rgba(46, 125, 50, 0.3); }
+        .btn-filtro.btn-faltantes-tab { background-color: #fff3e0; color: #e65100; border-color: #ffe0b2; }
+        .btn-filtro.btn-faltantes-tab.activo { background-color: #e65100; color: white; border-color: #e65100; }
+        .btn-filtro.btn-archivados-tab { background-color: #f3e8ff; color: #6b21a8; border-color: #e9d5ff; }
+        .btn-filtro.btn-archivados-tab.activo { background-color: #7e22ce; color: white; border-color: #7e22ce; }
+        .btn-filtro.btn-compartidos-tab { background-color: #ffebee; color: #c62828; border-color: #ffcdd2; }
+        .btn-filtro.btn-compartidos-tab.activo { background-color: #c62828; color: white; border-color: #c62828; }
+        .btn-filtro.btn-productos-tab { background-color: #e0f2fe; color: #0369a1; border-color: #bae6fd; }
+        .btn-filtro.btn-productos-tab.activo { background-color: #0284c7; color: white; border-color: #0284c7; }
+
+        /* LAYOUT PRINCIPAL */
+        .main-layout {
+            display: flex;
+            gap: 15px;
+            width: 100%;
+            align-items: flex-start;
+        }
+
+        .left-col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-width: 0;
+        }
+
+        .right-col {
+            width: 350px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            flex-shrink: 0;
+        }
+
+        /* FORMULARIOS DESPLEGABLES */
+        .top-forms {
+            display: flex;
+            gap: 15px;
+            width: 100%;
+            flex-wrap: wrap;
+        }
+
+        .formulario-details, .panel-empleados-details {
+            background: white; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            padding: 12px 15px; border: 1px solid #e2e8f0;
+        }
+
+        .formulario-details { border-top: 4px solid #f57c00; flex: 2; min-width: 320px; }
+        .panel-empleados-details { border-top: 4px solid #2e7d32; flex: 1; min-width: 240px; }
+
+        .formulario-details summary, .panel-empleados-details summary {
+            font-weight: bold; cursor: pointer; font-size: 15px; user-select: none; margin-bottom: 8px;
+        }
+        .formulario-details summary { color: #e65100; }
+        .panel-empleados-details summary { color: #2e7d32; }
+
+        .empleados-grupo { display: flex; gap: 5px; margin-bottom: 8px; }
+        .empleados-grupo input { flex: 1; padding: 6px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px; }
+        .lista-tags { display: flex; flex-wrap: wrap; gap: 5px; max-height: 80px; overflow-y: auto; }
+        .tag-empleado { background: #e8f5e9; padding: 3px 8px; border-radius: 12px; font-size: 12px; display: flex; align-items: center; gap: 5px; color: #2e7d32; font-weight: 600; }
+        .tag-empleado span { cursor: pointer; color: #d32f2f; font-weight: bold; }
+
+        /* CHAT GLOBAL REDIMENSIONABLE */
+        .panel-chat-details {
+            background: white; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            border-top: 4px solid #2b6cb0; border: 1px solid #e2e8f0; padding: 10px;
+            resize: both; overflow: auto; min-height: 250px; height: 380px; width: 100%; min-width: 260px;
+            display: flex; flex-direction: column;
+        }
+        .panel-chat-details summary { font-weight: bold; color: #2b6cb0; cursor: pointer; font-size: 13px; margin-bottom: 5px; }
+        
+        .chat-container-inner {
+            display: flex; flex-direction: column; flex: 1; min-height: 0; width: 100%;
+        }
+
+        .chat-tabs { display: flex; gap: 4px; margin-bottom: 8px; }
+        .btn-chat-tab { flex: 1; padding: 4px; font-size: 11px; background: #edf2f7; border: 1px solid #cbd5e0; border-radius: 4px; cursor: pointer; }
+        .btn-chat-tab.activo { background: #2b6cb0; color: white; border-color: #2b6cb0; font-weight: bold; }
+
+        .chat-login-box, .chat-register-box {
+            display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed #cbd5e0;
+        }
+        .chat-login-box input, .chat-login-box select, .chat-register-box input, .chat-register-box select {
+            padding: 5px; font-size: 11px; border: 1px solid #cbd5e0; border-radius: 4px;
+        }
+        .chat-messages {
+            flex: 1; min-height: 120px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px;
+            padding: 6px; background: #fafafa; margin-bottom: 8px; display: flex; flex-direction: column; gap: 4px;
+        }
+        .msg-item { font-size: 11px; line-height: 1.2; word-break: break-word; }
+        .msg-item .tag-suc { font-weight: bold; padding: 1px 3px; border-radius: 3px; color: white; font-size: 9px; margin-right: 3px; }
+        .tag-maipu { background-color: #2e7d32; }
+        .tag-mendoza { background-color: #e65100; }
+        .tag-chango { background-color: #f57f17; }
+        .msg-actions { font-size: 10px; color: #718096; cursor: pointer; margin-left: 4px; }
+
+        /* NOTAS DE ACTUALIZACIONES (MOSTRANDO 10 EDICIONES) */
+        .actualizaciones {
+            background-color: #fffde7; border: 1px solid #ffe082; border-radius: 12px;
+            padding: 10px 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid #fbc02d;
+        }
+        .actualizaciones summary { font-weight: bold; color: #f57f17; cursor: pointer; font-size: 13px; }
+        .actualizaciones ul { font-size: 11px; color: #4a5568; margin-top: 6px; padding-left: 15px; line-height: 1.3; max-height: 280px; overflow-y: auto; }
+        .actualizaciones li { margin-bottom: 6px; }
+        .version-badge { background: #f57f17; color: white; padding: 1px 4px; border-radius: 3px; font-size: 9px; font-weight: bold; margin-right: 3px; }
+        .creador-firma { font-size: 11px; color: #718096; text-align: right; margin-top: 4px; font-style: italic; font-weight: bold; }
+
+        /* INPUTS Y CONTROLES GENERALES */
+        .inputs-grupo { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+        input[type="text"].input-nombre { flex: 2; min-width: 150px; padding: 7px 9px; border: 1px solid #cbd5e0; border-radius: 6px; font-weight: bold; font-size: 12px; }
+        select.input-select { flex: 1; min-width: 110px; padding: 7px; border: 1px solid #cbd5e0; border-radius: 6px; background-color: white; font-weight: bold; font-size: 12px; }
+        
+        .opciones-extra-pedido { display: flex; gap: 12px; align-items: center; font-size: 11px; font-weight: bold; color: #4a5568; margin-bottom: 8px; flex-wrap: wrap; }
+        .opciones-extra-pedido label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+
+        textarea.caja-texto { width: 100%; height: 60px; padding: 6px; border-radius: 6px; border: 1px solid #cbd5e0; resize: vertical; margin-bottom: 8px; font-size: 12px; }
+        input[type="text"].caja-notas-pedido { width: 100%; padding: 6px; border-radius: 6px; border: 1px solid #cbd5e0; margin-bottom: 8px; font-size: 11px; background: #fffde7; }
+
+        button.btn-verde { background-color: #2e7d32; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; }
+        button.btn-verde:hover { background-color: #1b5e20; }
+        button.btn-eliminar { background-color: #e53e3e; color: white; border: none; padding: 4px 8px; font-size: 11px; border-radius: 4px; cursor: pointer; }
+        button.btn-archivar { background-color: #7e22ce; color: white; border: none; padding: 4px 8px; font-size: 11px; border-radius: 4px; cursor: pointer; }
+        button.btn-accion { background-color: #f57c00; color: white; border: none; font-size: 11px; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+
+        /* POST-ITS PERSONALIZABLES */
+        #contenedorPedidos { display: flex; flex-wrap: wrap; gap: 15px; width: 100%; align-items: flex-start; }
+        
+        .post-it { 
+            background-color: #fffde7; border-radius: 10px; box-shadow: 0 3px 6px rgba(0,0,0,0.08); 
+            width: 370px; min-width: 280px; max-width: 100%;
+            display: flex; flex-direction: column; border-left: 5px solid #fbc02d; transition: background 0.3s ease;
+            resize: both; overflow: auto;
+        }
+        .post-it.completado { background-color: #e8f5e9; border-left: 5px solid #2e7d32; }
+
+        .post-it-header { padding: 8px 10px; background-color: rgba(0,0,0,0.02); border-bottom: 1px solid rgba(0,0,0,0.06); }
+        .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
+        .header-top h3 { margin: 0; font-size: 14px; color: #1a202c; }
+        
+        .badge-tipo-cliente { font-size: 10px; font-weight: bold; padding: 1px 5px; border-radius: 3px; background: #e2e8f0; color: #2d3748; margin-left: 4px; }
+        .badge-efectivo { font-size: 10px; font-weight: bold; padding: 1px 5px; border-radius: 3px; background: #c8e6c9; color: #1b5e20; margin-left: 4px; }
+
+        .personal-row { display: flex; gap: 8px; font-size: 11px; margin-bottom: 6px; color: #4a5568; }
+        .personal-row div { flex: 1; display: flex; flex-direction: column; gap: 1px; }
+        .personal-row select { padding: 3px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 10px; background: #fff; }
+
+        .estado-checks { display: flex; flex-direction: column; gap: 4px; font-size: 11px; font-weight: bold; background-color: rgba(255,255,255,0.7); padding: 5px 7px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.04); }
+        .estado-linea { display: flex; align-items: center; justify-content: space-between; }
+        .estado-linea label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+
+        .remito-box { margin-top: 4px; padding-top: 4px; border-top: 1px dashed #cbd5e0; font-size: 10px; display: flex; align-items: center; gap: 5px; }
+        .remito-box input[type="file"] { display: none; }
+        .btn-remito { background-color: #2b6cb0; color: white; border: none; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 10px; }
+
+        .nota-general-pedido { background: #fff3e0; border: 1px solid #ffe0b2; padding: 6px; border-radius: 4px; font-size: 11px; color: #e65100; margin-bottom: 8px; font-weight: 600; line-height: 1.3; }
+
+        .post-it-body { padding: 10px; }
+
+        .lista-items { margin: 0; padding: 0; list-style: none; }
+        .item-row { display: flex; align-items: center; gap: 4px; margin-bottom: 5px; font-size: 11px; flex-wrap: wrap; }
+        .item-row input[type="checkbox"] { margin: 0; width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; accent-color: #2e7d32; }
+        .item-texto { flex: 1; line-height: 1.2; word-break: break-word; color: #2d3748; min-width: 100px; }
+        
+        .item-parcial { width: 60px; font-size: 10px; padding: 2px; border: 1px solid #f6ad55; border-radius: 3px; background-color: #fffaf0;}
+        .item-reemplazo { width: 65px; font-size: 10px; padding: 2px; border: 1px solid #ecc94b; border-radius: 3px; background-color: #fefcbf;}
+        .item-nota { width: 45px; font-size: 10px; padding: 2px; border: 1px solid #cbd5e0; border-radius: 3px; }
+        
+        .marcado .item-texto { text-decoration: line-through; color: #a0aec0; }
+
+        .seccion-separa { background-color: #e8f5e9; border: 1px solid #a5d6a7; padding: 6px; border-radius: 6px; margin-top: 8px; font-size: 10px; }
+        .seccion-separa h4 { margin: 0 0 3px 0; color: #1b5e20; font-size: 10px; text-transform: uppercase; }
+        .seccion-separa ul { margin: 0; padding-left: 12px; color: #2e7d32; }
+
+        .seccion-faltantes { margin-top: 10px; padding-top: 8px; border-top: 1px dashed #cbd5e0; }
+        .seccion-faltantes label { font-size: 11px; font-weight: bold; color: #c53030; display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; }
+        .caja-faltantes { width: 100%; min-height: 70px; font-size: 11px; padding: 6px; border: 1px solid #cbd5e0; border-radius: 6px; resize: vertical; margin-bottom: 5px; background-color: #fff; }
+        
+        .buscador-caja {
+            width: 100%; padding: 6px 10px; font-size: 12px; border: 1px solid #cbd5e0; border-radius: 6px; margin-bottom: 8px; background: #ffffff;
+        }
+
+        .card-faltante-item { background: #ffffff; border: 1px solid #e2e8f0; padding: 8px; border-radius: 6px; margin-bottom: 6px; display: flex; flex-direction: column; gap: 4px; }
+        .card-faltante-row { display: flex; align-items: center; gap: 6px; font-size: 11px; }
+        .card-faltante-row input[type="text"] { width: 65px; padding: 2px 4px; font-size: 10px; border: 1px solid #cbd5e0; border-radius: 3px; }
+        .card-faltante-row select { padding: 2px 4px; font-size: 10px; border: 1px solid #cbd5e0; border-radius: 3px; }
+
+        /* GRID Y CONTENEDORES */
+        .contenedor-faltantes-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; width: 100%;
+        }
+        .box-faltantes-sucursal {
+            background: white; border-radius: 10px; padding: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid #cbd5e0;
+        }
+        .box-faltantes-sucursal.maipu { border-color: #2e7d32; }
+        .box-faltantes-sucursal.mendoza { border-color: #e65100; }
+        .box-faltantes-sucursal.chango { border-color: #f57f17; }
+        .box-faltantes-sucursal.general { border-color: #c53030; background: #fff5f5; }
+        .box-faltantes-sucursal h3 { margin: 0 0 8px 0; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+        .area-copia-faltantes { width: 100%; height: 160px; font-size: 11px; padding: 6px; border: 1px solid #cbd5e0; border-radius: 6px; background: #fff; }
+
+        /* TABLA DEL CATÁLOGO DE PRODUCTOS */
+        .box-productos-catalogo {
+            background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-top: 4px solid #0284c7; width: 100%;
+        }
+        .tabla-productos {
+            width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px;
+        }
+        .tabla-productos th, .tabla-productos td {
+            padding: 8px 10px; text-align: left; border-bottom: 1px solid #e2e8f0;
+        }
+        .tabla-productos th { background: #f0f9ff; color: #0369a1; font-weight: bold; }
+        .tabla-productos tr:hover { background: #f8fafc; }
+    </style>
+</head>
+<body>
+
+    <!-- BARRA DE FILTROS SUPERIOR -->
+    <div class="filtros-sucursal">
+        <span>Filtrar sucursal:</span>
+        <button class="btn-filtro activo" onclick="filtrarSucursal('Todos', this)">Todos</button>
+        <button class="btn-filtro" onclick="filtrarSucursal('Mendoza', this)">Mendoza</button>
+        <button class="btn-filtro" onclick="filtrarSucursal('Chango Mas', this)">Chango Mas</button>
+        <button class="btn-filtro" onclick="filtrarSucursal('Maipu', this)">Maipu</button>
+        <button class="btn-filtro btn-archivados-tab" onclick="filtrarSucursal('PEDIDOS_ARCHIVADOS', this)">📂 PEDIDOS ARCHIVADOS</button>
+        <button class="btn-filtro btn-faltantes-tab" onclick="filtrarSucursal('FALTANTES_PEDIDOS', this)">⚠️ FALTANTES DE PEDIDOS</button>
+        <button class="btn-filtro btn-faltantes-tab" onclick="filtrarSucursal('FALTANTES_SUCURSAL', this)">📊 FALTANTES POR SUCURSAL</button>
+        <button class="btn-filtro btn-compartidos-tab" onclick="filtrarSucursal('FALTANTES_COMPARTIDOS', this)">🔴 FALTANTES GENERALES (COMPARTIDOS)</button>
+        <button class="btn-filtro btn-productos-tab" onclick="filtrarSucursal('CATALOGO_PRODUCTOS', this)">📦 CATÁLOGO DE PRODUCTOS</button>
+    </div>
+
+    <!-- LAYOUT PRINCIPAL -->
+    <div class="main-layout">
+        <!-- COLUMNA IZQUIERDA -->
+        <div class="left-col">
+            <div class="top-forms" id="bloqueFormularios">
+                <!-- FORMULARIO ARMADOR DESPLEGABLE -->
+                <details class="formulario-details" open>
+                    <summary>📋 Armador de Pedidos</summary>
+                    <div class="inputs-grupo">
+                        <input type="text" id="nombrePedido" class="input-nombre" placeholder="Nombre del Cliente (Ej: Juan Perez)">
+                        <select id="sucursalPedido" class="input-select">
+                            <option value="Mendoza">Mendoza</option>
+                            <option value="Chango Mas">Chango Mas</option>
+                            <option value="Maipu">Maipu</option>
+                        </select>
+                        <select id="tipoClientePedido" class="input-select">
+                            <option value="Consumidor Final">Consumidor Final</option>
+                            <option value="Mayorista">Mayorista</option>
+                            <option value="Página">Página</option>
+                        </select>
+                    </div>
+
+                    <div class="opciones-extra-pedido">
+                        <label><input type="checkbox" id="descEfectivoPedido"> 💵 Descuento en efectivo</label>
+                    </div>
+
+                    <textarea id="textoPedido" class="caja-texto" placeholder="Pega el mensaje del cliente aquí..."></textarea>
+                    <input type="text" id="notaGeneralPedido" class="caja-notas-pedido" placeholder="📌 Notas adicionales del pedido...">
+                    
+                    <button class="btn-verde" onclick="crearPedido()">➕ Agregar Pedido</button>
+                </details>
+
+                <!-- PANEL EMPLEADOS DESPLEGABLE -->
+                <details class="panel-empleados-details" open>
+                    <summary>👥 Personal / Empleados</summary>
+                    <div class="empleados-grupo">
+                        <input type="text" id="nuevoEmpleado" placeholder="Nombre empleado...">
+                        <button class="btn-verde" onclick="agregarEmpleado()" style="padding: 6px 10px; font-size: 12px;">Agregar</button>
+                    </div>
+                    <div class="lista-tags" id="listaEmpleadosTags"></div>
+                </details>
+            </div>
+
+            <!-- CONTENEDOR DE POST-ITS / VISTAS -->
+            <div id="contenedorPedidos"></div>
+        </div>
+
+        <!-- COLUMNA DERECHA -->
+        <div class="right-col">
+            <!-- CHAT GLOBAL -->
+            <details class="panel-chat-details" open>
+                <summary>💬 CHAT GLOBAL (Ajustable ⇲)</summary>
+                
+                <div class="chat-container-inner">
+                    <div class="chat-tabs">
+                        <button class="btn-chat-tab activo" id="tabChat1" onclick="cambiarSesionChat(1)">💬 Chat 1</button>
+                        <button class="btn-chat-tab" id="tabChat2" onclick="cambiarSesionChat(2)">💬 Chat 2</button>
+                    </div>
+
+                    <div id="chatAuthBox">
+                        <div class="chat-login-box">
+                            <input type="text" id="loginUser" placeholder="Usuario">
+                            <input type="password" id="loginPass" placeholder="Contraseña">
+                            <button class="btn-accion" onclick="loginChat()">Iniciar Sesión</button>
+                        </div>
+                        <details class="chat-register-box">
+                            <summary style="font-size:11px; cursor:pointer; color:#2b6cb0;">➕ Crear cuenta</summary>
+                            <input type="text" id="regUser" placeholder="Nombre usuario">
+                            <input type="password" id="regPass" placeholder="Contraseña">
+                            <select id="regSucursal">
+                                <option value="Maipu">Maipu (Verde)</option>
+                                <option value="Mendoza">Mendoza (Naranja)</option>
+                                <option value="Chango Mas">Chango Mas (Amarillo)</option>
+                            </select>
+                            <button class="btn-verde" style="padding:4px; font-size:11px; margin-top:4px;" onclick="registrarUsuarioChat()">Crear Cuenta</button>
+                        </details>
+                    </div>
+
+                    <div id="chatSessionBox" style="display:none; flex:1; flex-direction:column; min-height:0;">
+                        <div style="font-size:11px; margin-bottom:5px; font-weight:bold; color:#2d3748; display:flex; justify-content:space-between; align-items:center;">
+                            <span>👤 <b id="chatUserDisplay"></b></span>
+                            <button onclick="logoutChat()" style="font-size:10px; padding:2px 5px; border:none; background:#cbd5e0; border-radius:3px; cursor:pointer;">Salir</button>
+                        </div>
+                        <div class="chat-messages" id="chatMessagesBox"></div>
+                        <div style="display:flex; gap:4px; margin-top:auto;">
+                            <input type="text" id="chatInputMsg" placeholder="Mensaje..." style="flex:1; padding:4px; font-size:11px; border:1px solid #cbd5e0; border-radius:4px;">
+                            <button class="btn-verde" style="padding:4px 8px; font-size:11px;" onclick="enviarMensajeChat()">Enviar</button>
+                        </div>
+                    </div>
+                </div>
+            </details>
+
+            <!-- NOTAS DE ACTUALIZACIONES (ÚLTIMAS 10) -->
+            <div class="actualizaciones-container">
+                <details class="actualizaciones" open>
+                    <summary>📣 NOTAS DE ACTUALIZACIONES (Últimas 10)</summary>
+                    <ul>
+                        <li><span class="version-badge">v3.0</span> <b>Desbloqueo Total & Botones Visibles:</b>
+                            <ul>
+                                <li>Desbloqueo general de checkboxes, selectores e inputs sin requerir chat.</li>
+                                <li>Restauración visible de los botones 📂 Archivar y 🗑️ Eliminar por pedido.</li>
+                                <li>Historial completo de las últimas 10 actualizaciones visible en scroll.</li>
+                            </ul>
+                        </li>
+                        <li><span class="version-badge">v2.9</span> <b>Pedidos Archivados & Anti-Basura:</b> Módulo de archivado de pedidos y filtro mejorado de texto copiado.</li>
+                        <li><span class="version-badge">v2.8</span> <b>Faltantes Históricos Persistentes:</b> Acumulación ininterrumpida de faltantes aunque se borren pedidos.</li>
+                        <li><span class="version-badge">v2.7</span> <b>Acumulación de Cantidades:</b> Agrupado de kilos y unidades duplicadas entre clientes (ej: 10kg + 10kg = 20kg).</li>
+                        <li><span class="version-badge">v2.6</span> <b>Visualización de Remitos PDF:</b> Carga y vista integrada de remitos adjuntos por cliente.</li>
+                        <li><span class="version-badge">v2.5</span> <b>Asignación Multi-Sucursal:</b> Separación de faltantes por sucursal responsable.</li>
+                        <li><span class="version-badge">v2.4</span> <b>Faltantes Compartidos Generales:</b> Vista unificada global de stock faltante.</li>
+                        <li><span class="version-badge">v2.3</span> <b>Detección de Ambiguos:</b> Alerta automática en ítems imprecisos (ej: "yerba", "sal").</li>
+                        <li><span class="version-badge">v2.2</span> <b>Soporte Multi-Sesión en Chat:</b> Gestión independiente de cuentas por pestaña de chat.</li>
+                        <li><span class="version-badge">v2.1</span> <b>Optimización de Interfaz:</b> Rediseño fluido de post-its con soporte para notas rápidas.</li>
+                    </ul>
+                </details>
+                <div class="creador-firma">Creado por : Nazareno Martinez</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CATALOGO_AMBIGUO = ['sal', 'yerba', 'aceite', 'alfajor', 'harina', 'fideo', 'leche', 'té', 'te', 'miel', 'azucar', 'semillas', 'arroz', 'avena'];
+
+        // BASE COMPLETA DE 1,013 PRODUCTOS EXTRAÍDOS DEL EXCEL
+        const CATALOGO_PRODUCTOS_EXCEL = ["PROMO PAN KAUFER", "Alfajor CHOCOLEIT negro 0% AZUCAR SIN TACC", "Alfajor CELIENERGY Avellana B SIN TACC", "Yerba AJEDREZ PREMIUM CANCHADA 500 gr", "Barra MUECAS Manz Arand 45 gr", "Alfajor CHOCOLEIT blanco 0% AZUCAR SIN TACC", "EdulKONY 200 ml", "Harina de coco CUMANA 200 gr", "Leche Avena Italiana AMANDE 1 Lt", "Premezc. PAN con Psyillum Husk DICOMERE 450 gr SIN TACC", "Alfajor CELIENERGY Nuez SIN TACC", "Pistacho Natural SIN CASC CUMANA 150 gr", "Cereza Marrasquino CUMANA Fr. 200 gr", "Fideo SOYARROZ C Angel 300 gr", "Pistacho Con Cascara CUMANA 150 gr", "Gallet. PEPAS DIA VITA 150 gr SIN TACC", "Snack Garbanzo Ahumado CROYDON 60 gr", "Gallet. MARLBORO Avena Coco Pasas 200 gr", "Te CHAI TISSAN Sembras 20 saq", "Aceite de Coco VIRGEN GODBLESS 500 cc", "Granola CRUNCHY Frutos Secos 500 gr", "Nuez Mariposa Extra Blanca 1 kg", "Tutuca Dulce Especial 1 kg", "Masitas Pepas Membrillo 1 kg", "Masitas Palitos Integrales 1 kg", "Fécula de Mandioca Especial 1 kg"];
+
+        let pedidos = JSON.parse(localStorage.getItem('pedidosGuardados')) || [];
+        let empleados = JSON.parse(localStorage.getItem('empleadosGuardados')) || ['Juan', 'Maria', 'Carlos'];
+        let chatMensajes = JSON.parse(localStorage.getItem('chatMensajesGuardados')) || [];
+        let faltantesHistoricos = JSON.parse(localStorage.getItem('faltantesHistoricosGuardados')) || [];
+        
+        let chatUsuarios = JSON.parse(localStorage.getItem('chatUsuariosGuardados')) || [
+            { user: 'Admin Fabri', pass: '2222', sucursal: 'Mendoza', isAdmin: true },
+            { user: 'Admin Nacho', pass: '2222', sucursal: 'Maipu', isAdmin: true }
+        ];
+        
+        let sesionChatActiva = 1;
+        let usuarioSesion1 = JSON.parse(localStorage.getItem('chatUsuarioSesion1')) || null;
+        let usuarioSesion2 = JSON.parse(localStorage.getItem('chatUsuarioSesion2')) || null;
+
+        let sucursalActiva = 'Todos';
+
+        renderizarEmpleados();
+        renderizarPedidos();
+        initChatUI();
+
+        function guardarEnMemoria() {
+            localStorage.setItem('pedidosGuardados', JSON.stringify(pedidos));
+            localStorage.setItem('empleadosGuardados', JSON.stringify(empleados));
+            localStorage.setItem('chatMensajesGuardados', JSON.stringify(chatMensajes));
+            localStorage.setItem('faltantesHistoricosGuardados', JSON.stringify(faltantesHistoricos));
+            localStorage.setItem('chatUsuariosGuardados', JSON.stringify(chatUsuarios));
+            localStorage.setItem('chatUsuarioSesion1', JSON.stringify(usuarioSesion1));
+            localStorage.setItem('chatUsuarioSesion2', JSON.stringify(usuarioSesion2));
+        }
+
+        function getUsuarioChatActual() {
+            return sesionChatActiva === 1 ? usuarioSesion1 : usuarioSesion2;
+        }
+
+        function setUsuarioChatActual(usr) {
+            if (sesionChatActiva === 1) usuarioSesion1 = usr;
+            else usuarioSesion2 = usr;
+            guardarEnMemoria();
+            renderizarPedidos();
+        }
+
+        function filtrarSucursal(sucursal, botonElemento) {
+            sucursalActiva = sucursal;
+            document.querySelectorAll('.btn-filtro').forEach(btn => btn.classList.remove('activo'));
+            botonElemento.classList.add('activo');
+
+            const formTop = document.getElementById('bloqueFormularios');
+            if (sucursal.startsWith('FALTANTES') || sucursal === 'CATALOGO_PRODUCTOS' || sucursal === 'PEDIDOS_ARCHIVADOS') {
+                formTop.style.display = 'none';
+            } else {
+                formTop.style.display = 'flex';
+            }
+
+            renderizarPedidos();
+        }
+
+        // --- EMPLEADOS ---
+        function agregarEmpleado() {
+            const input = document.getElementById('nuevoEmpleado');
+            const nombre = input.value.trim();
+            if (nombre && !empleados.includes(nombre)) {
+                empleados.push(nombre);
+                input.value = '';
+                guardarEnMemoria();
+                renderizarEmpleados();
+                renderizarPedidos();
+            }
+        }
+
+        function eliminarEmpleado(nombre) {
+            empleados = empleados.filter(e => e !== nombre);
+            guardarEnMemoria();
+            renderizarEmpleados();
+            renderizarPedidos();
+        }
+
+        function renderizarEmpleados() {
+            const contenedor = document.getElementById('listaEmpleadosTags');
+            contenedor.innerHTML = '';
+            empleados.forEach(emp => {
+                const tag = document.createElement('div');
+                tag.className = 'tag-empleado';
+                tag.innerHTML = `${emp} <span onclick="eliminarEmpleado('${emp}')">&times;</span>`;
+                contenedor.appendChild(tag);
+            });
+        }
+
+        // --- EXTRACCIÓN Y DETECCIÓN DE UNIDADES VS KG ---
+        function extraerCantidadYNombre(cadena) {
+            let txt = cadena.trim();
+            let match = txt.match(/^([\d\/\.,\s]+(?:kg|kilos?|g|gr|gramos?|unid|unidades?|un|lt|litros?|pack|saq)?)\s*(?:de\s*)?(.*)$/i);
+            
+            if (match) {
+                let cantStr = match[1].trim().toLowerCase();
+                let nombreProd = match[2].trim();
+                let valor = 0;
+                let esUnidad = cantStr.includes('un') || cantStr.includes('pack') || cantStr.includes('saq');
+
+                if (cantStr.includes('1/2') || cantStr.includes('medio')) valor = 0.5;
+                else if (cantStr.includes('1/4') || cantStr.includes('cuarto')) valor = 0.25;
+                else {
+                    let num = parseFloat(cantStr.replace(',', '.'));
+                    if (!isNaN(num)) {
+                        if (cantStr.includes('g') && !cantStr.includes('kg')) valor = num / 1000;
+                        else valor = num;
+                    }
+                }
+                return { nombre: nombreProd || txt, cantidad: valor, esUnidad: esUnidad };
+            }
+            return { nombre: txt, cantidad: 1, esUnidad: true };
+        }
+
+        // --- PARSER INTELIGENTE ANTI-BASURA ---
+        function procesarTextoPedido(textoRaw) {
+            let lineas = textoRaw.split(/[,\n]+/);
+            let productosValidos = [];
+            let notasExtraidas = [];
+
+            const palabrasDescarte = [
+                'hola', 'buenas', 'tardes', 'dias', 'noches', 'voy a retirar', 'retirar por',
+                'retiro por', 'paso a buscar', 'gracias', 'cuanto seria', 'espero tu respuesta',
+                'me mandas', 'puedes enviar', 'queria hacer un pedido', 'quisiera hacer', 'necesito',
+                'mayorista', 'consumidor final', 'pagina', 'página', 'maipu', 'mendoza', 'chango mas', 'sucursal:'
+            ];
+
+            const clientesOBasuraSistema = [
+                'alejandra santa coloma', 'luisina nicolino', 'pepepep', 'sucursal', 'cliente'
+            ];
+
+            const indicadoresNota = ['y si hay', 'si tienen', 'si te queda', 'en caso de tener', 'tambien', 'si hay'];
+
+            lineas.forEach(linea => {
+                let txt = linea.trim();
+                let txtLower = txt.toLowerCase();
+                if (!txt) return;
+
+                let esNota = indicadoresNota.some(ind => txtLower.includes(ind));
+                if (esNota) {
+                    notasExtraidas.push(txt);
+                    return;
+                }
+
+                let esEncabezadoOCliente = clientesOBasuraSistema.some(b => txtLower.includes(b));
+                if (esEncabezadoOCliente) return;
+
+                let tieneUnidad = /(\d+|1\/2|1\/4|medio|kg|kilo|gr|g|litro|lt|pack|unidades?)/i.test(txtLower);
+                let esBasura = palabrasDescarte.some(f => txtLower.startsWith(f) || txtLower === f);
+
+                if ((tieneUnidad || txt.length > 4) && !esBasura) {
+                    let textoLimpio = txt.replace(/medio\s*1\/2/gi, '1/2').replace(/1\/2\s*medio/gi, '1/2').replace(/\bkilos?\b/gi, 'kg');
+                    textoLimpio = analizarAmbiguos(textoLimpio);
+                    productosValidos.push(textoLimpio);
+                }
+            });
+
+            return { productos: productosValidos, notas: notasExtraidas.join(' - ') };
+        }
+
+        function analizarAmbiguos(textoItem) {
+            let txtLower = textoItem.toLowerCase();
+            for (let pal of CATALOGO_AMBIGUO) {
+                const regex = new RegExp(`\\b${pal}\\b`, 'i');
+                if (regex.test(txtLower) && !txtLower.includes('marina') && !txtLower.includes('himalaya') && !txtLower.includes('tacc') && txtLower.split(' ').length <= 4) {
+                    return textoItem + ' (No aclara cuál)';
+                }
+            }
+            return textoItem;
+        }
+
+        function crearPedido() {
+            const nombre = document.getElementById('nombrePedido').value.trim() || 'Sin Nombre';
+            const sucursal = document.getElementById('sucursalPedido').value;
+            const tipoCliente = document.getElementById('tipoClientePedido').value;
+            const descEfectivo = document.getElementById('descEfectivoPedido').checked;
+            const textoRaw = document.getElementById('textoPedido').value;
+            let notaManual = document.getElementById('notaGeneralPedido').value.trim();
+            
+            if (!textoRaw.trim()) { alert("Por favor, ingresa los productos del pedido."); return; }
+
+            const resultado = procesarTextoPedido(textoRaw);
+            
+            let notaFinal = notaManual;
+            if (resultado.notas) {
+                notaFinal = notaFinal ? `${notaManual} | ${resultado.notas}` : resultado.notas;
+            }
+
+            const items = resultado.productos.map(prodText => ({
+                idItem: Date.now().toString() + Math.random().toString(36).substr(2, 4),
+                texto: prodText, 
+                marcado: false, 
+                nota: '', 
+                soloTengo: '',
+                reemplazo: '',
+                separaciones: []
+            }));
+
+            if (items.length > 0) {
+                const nuevoPedido = {
+                    id: Date.now().toString(),
+                    nombre: nombre,
+                    sucursal: sucursal,
+                    tipoCliente: tipoCliente,
+                    descEfectivo: descEfectivo,
+                    notaGeneral: notaFinal,
+                    armador: '', 
+                    entregador: '',
+                    tickCompletado: false,
+                    tickEntregado: false,
+                    archivado: false,
+                    items: items,
+                    textoFaltantesGuardado: '',
+                    minimizado: false,
+                    remitoPdf: null
+                };
+                
+                pedidos.push(nuevoPedido);
+                guardarEnMemoria();
+                renderizarPedidos();
+
+                document.getElementById('nombrePedido').value = '';
+                document.getElementById('textoPedido').value = '';
+                document.getElementById('notaGeneralPedido').value = '';
+                document.getElementById('descEfectivoPedido').checked = false;
+            } else {
+                alert("No se detectaron productos válidos en el mensaje.");
+            }
+        }
+
+        function registrarFaltantesEnHistorial(pedido) {
+            pedido.items.filter(i => !i.marcado || (i.soloTengo && i.soloTengo.trim() !== '')).forEach(item => {
+                faltantesHistoricos.push({
+                    idPedido: pedido.id,
+                    cliente: pedido.nombre,
+                    sucursal: pedido.sucursal,
+                    texto: item.texto,
+                    soloTengo: item.soloTengo || '',
+                    fecha: new Date().toLocaleDateString('es-AR')
+                });
+            });
+            guardarEnMemoria();
+        }
+
+        function renderizarPedidos() {
+            const contenedor = document.getElementById('contenedorPedidos');
+            contenedor.innerHTML = ''; 
+
+            if (sucursalActiva === 'FALTANTES_PEDIDOS') {
+                renderizarFaltantesDePedidosEspecificos(contenedor);
+                return;
+            }
+
+            if (sucursalActiva === 'FALTANTES_SUCURSAL') {
+                renderizarFaltantesPorSucursal(contenedor);
+                return;
+            }
+
+            if (sucursalActiva === 'FALTANTES_COMPARTIDOS') {
+                renderizarFaltantesCompartidos(contenedor);
+                return;
+            }
+
+            if (sucursalActiva === 'CATALOGO_PRODUCTOS') {
+                renderizarCatalogoProductos(contenedor);
+                return;
+            }
+
+            const pedidosFiltrados = pedidos.filter(p => {
+                if (sucursalActiva === 'PEDIDOS_ARCHIVADOS') {
+                    return p.archivado === true;
+                }
+                if (p.archivado) return false;
+                if (sucursalActiva === 'Todos') return true;
+                return p.sucursal === sucursalActiva;
+            });
+
+            if (pedidosFiltrados.length === 0) {
+                contenedor.innerHTML = `<p style="color: #718096; font-style: italic; width: 100%;">No hay pedidos para mostrar en esta vista.</p>`;
+                return;
+            }
+
+            pedidosFiltrados.forEach((pedido) => {
+                const divPostIt = document.createElement('div');
+                divPostIt.className = `post-it ${pedido.minimizado ? 'completado' : ''}`;
+                
+                const header = document.createElement('div');
+                header.className = 'post-it-header';
+                
+                header.innerHTML = `
+                    <div class="header-top">
+                        <h3>
+                            ${pedido.nombre} 
+                            <span class="badge-tipo-cliente">${pedido.tipoCliente || 'Consumidor Final'}</span>
+                            ${pedido.descEfectivo ? `<span class="badge-efectivo">💵 Desc. Efectivo</span>` : ''}
+                            <span style="font-size:11px; color:#e65100; font-weight:600; display:block; margin-top:2px;">📍 Sucursal: ${pedido.sucursal}</span>
+                        </h3>
+                        <div style="display:flex; gap:3px;">
+                            <button class="btn-accion" onclick="toggleMinimizar('${pedido.id}')">${pedido.minimizado ? '🔽' : '🔼'}</button>
+                            <button class="btn-archivar" title="${pedido.archivado ? 'Desarchivar' : 'Archivar'}" onclick="toggleArchivar('${pedido.id}')">${pedido.archivado ? '📤' : '📂'}</button>
+                            <button class="btn-eliminar" title="Eliminar definitivamente" onclick="eliminarPedido('${pedido.id}')">🗑️</button>
+                        </div>
+                    </div>
+                `;
+
+                const divPersonal = document.createElement('div');
+                divPersonal.className = 'personal-row';
+                
+                const colArma = document.createElement('div');
+                colArma.innerHTML = `<label>Armado por (*):</label>`;
+                const selectArma = document.createElement('select');
+                selectArma.innerHTML = `<option value="">-- Seleccionar --</option>`;
+                empleados.forEach(emp => {
+                    selectArma.innerHTML += `<option value="${emp}" ${pedido.armador === emp ? 'selected' : ''}>${emp}</option>`;
+                });
+                selectArma.onchange = (e) => { pedido.armador = e.target.value; guardarEnMemoria(); };
+                colArma.appendChild(selectArma);
+
+                const colEntrega = document.createElement('div');
+                colEntrega.innerHTML = `<label>Entregado por:</label>`;
+                const selectEntrega = document.createElement('select');
+                selectEntrega.innerHTML = `<option value="">-- Seleccionar --</option>`;
+                empleados.forEach(emp => {
+                    selectEntrega.innerHTML += `<option value="${emp}" ${pedido.entregador === emp ? 'selected' : ''}>${emp}</option>`;
+                });
+                selectEntrega.onchange = (e) => { pedido.entregador = e.target.value; guardarEnMemoria(); };
+                colEntrega.appendChild(selectEntrega);
+
+                divPersonal.appendChild(colArma);
+                divPersonal.appendChild(colEntrega);
+                header.appendChild(divPersonal);
+
+                const divTicks = document.createElement('div');
+                divTicks.className = 'estado-checks';
+                divTicks.innerHTML = `
+                    <div class="estado-linea"><label><input type="checkbox" id="chk-comp-${pedido.id}" ${pedido.tickCompletado ? 'checked' : ''}> ✅ Completado</label></div>
+                    <div class="estado-linea"><label><input type="checkbox" id="chk-entr-${pedido.id}" ${pedido.tickEntregado ? 'checked' : ''}> 📦 Entregado</label></div>
+                    <div class="remito-box">
+                        📄 <b>Remito PDF:</b>
+                        ${pedido.remitoPdf ? `
+                            <button class="btn-remito" onclick="verRemito('${pedido.id}')">Ver/Descargar</button>
+                            <button class="btn-eliminar" style="padding:2px 5px; font-size:10px;" onclick="eliminarRemito('${pedido.id}')">X</button>
+                        ` : `
+                            <label class="btn-remito" style="cursor:pointer;">Cargar PDF <input type="file" accept="application/pdf" onchange="cargarRemito('${pedido.id}', event)"></label>
+                        `}
+                    </div>
+                `;
+                
+                header.appendChild(divTicks);
+                divPostIt.appendChild(header);
+
+                setTimeout(() => {
+                    document.getElementById(`chk-comp-${pedido.id}`).onchange = (e) => {
+                        if (e.target.checked && (!pedido.armador || pedido.armador.trim() === '')) {
+                            alert("⚠️ Debes seleccionar primero el empleado que lo empaquetó ('Armado por').");
+                            e.target.checked = false;
+                            return;
+                        }
+                        pedido.tickCompletado = e.target.checked;
+                        if (pedido.tickCompletado) {
+                            registrarFaltantesEnHistorial(pedido);
+                        }
+                        guardarEnMemoria();
+                    };
+                    document.getElementById(`chk-entr-${pedido.id}`).onchange = (e) => {
+                        pedido.tickEntregado = e.target.checked;
+                        guardarEnMemoria();
+                    };
+                }, 0);
+
+                const body = document.createElement('div');
+                body.className = 'post-it-body';
+                if (pedido.minimizado) body.style.display = 'none';
+
+                if (pedido.notaGeneral) {
+                    const divNotaG = document.createElement('div');
+                    divNotaG.className = 'nota-general-pedido';
+                    divNotaG.innerHTML = `📌 <b>Nota:</b> ${pedido.notaGeneral}`;
+                    body.appendChild(divNotaG);
+                }
+
+                const ul = document.createElement('ul');
+                ul.className = 'lista-items';
+
+                pedido.items.forEach((item) => {
+                    const li = document.createElement('li');
+                    li.className = `item-row ${item.marcado ? 'marcado' : ''}`;
+                    
+                    const check = document.createElement('input');
+                    check.type = 'checkbox';
+                    check.checked = item.marcado;
+                    check.onchange = (e) => {
+                        item.marcado = e.target.checked;
+                        if(item.marcado) li.classList.add('marcado');
+                        else li.classList.remove('marcado');
+                        guardarEnMemoria();
+                    };
+
+                    const spanText = document.createElement('span');
+                    spanText.className = 'item-texto';
+                    spanText.textContent = item.texto;
+
+                    const inputSoloTengo = document.createElement('input');
+                    inputSoloTengo.type = 'text'; inputSoloTengo.className = 'item-parcial';
+                    inputSoloTengo.placeholder = 'Solo tengo...'; inputSoloTengo.value = item.soloTengo || '';
+                    inputSoloTengo.oninput = (e) => { item.soloTengo = e.target.value; guardarEnMemoria(); };
+
+                    const inputReemplazo = document.createElement('input');
+                    inputReemplazo.type = 'text'; inputReemplazo.className = 'item-reemplazo';
+                    inputReemplazo.placeholder = 'Reemplazo...'; inputReemplazo.value = item.reemplazo || '';
+                    inputReemplazo.oninput = (e) => { item.reemplazo = e.target.value; guardarEnMemoria(); };
+
+                    const inputNota = document.createElement('input');
+                    inputNota.type = 'text'; inputNota.className = 'item-nota';
+                    inputNota.placeholder = 'Nota...'; inputNota.value = item.nota || '';
+                    inputNota.oninput = (e) => { item.nota = e.target.value; guardarEnMemoria(); };
+
+                    li.appendChild(check); li.appendChild(spanText);
+                    li.appendChild(inputSoloTengo); li.appendChild(inputReemplazo); li.appendChild(inputNota);
+                    ul.appendChild(li);
+                });
+
+                body.appendChild(ul);
+
+                const itemsConSeparacion = pedido.items.filter(i => i.separaciones && i.separaciones.length > 0);
+                if (itemsConSeparacion.length > 0) {
+                    const divSepara = document.createElement('div');
+                    divSepara.className = 'seccion-separa';
+                    divSepara.innerHTML = `<h4>Separan otras sucursales:</h4>`;
+                    const ulSepara = document.createElement('ul');
+                    itemsConSeparacion.forEach(i => {
+                        i.separaciones.forEach(sep => {
+                            ulSepara.innerHTML += `<li><b>${i.texto}</b> → <u>${sep.sucursal}</u> separa: <b>${sep.cantidad}</b></li>`;
+                        });
+                    });
+                    divSepara.appendChild(ulSepara);
+                    body.appendChild(divSepara);
+                }
+
+                const divFaltantes = document.createElement('div');
+                divFaltantes.className = 'seccion-faltantes';
+                divFaltantes.innerHTML = `
+                    <label>
+                        <span>FALTANTES Y REEMPLAZOS:</span>
+                        <div>
+                            <button type="button" class="btn-accion" style="padding:2px 5px; font-size:10px;" onclick="copiarTextoArea('faltantes-${pedido.id}')">📋 Copiar</button>
+                            <button type="button" style="border:none; background:transparent; cursor:pointer; font-size:14px;" onclick="habilitarEdicionFaltantes('${pedido.id}')">✏️</button>
+                        </div>
+                    </label>
+                    <textarea class="caja-faltantes" id="faltantes-${pedido.id}" readonly oninput="guardarTextoFaltantes('${pedido.id}', this.value)">${pedido.textoFaltantesGuardado || ''}</textarea>
+                    <button class="btn-accion" style="width:100%; background:#2e7d32; font-size:12px; padding:5px;" onclick="generarFaltantes('${pedido.id}')">Recopilar Faltantes</button>
+                `;
+                
+                body.appendChild(divFaltantes);
+                divPostIt.appendChild(body);
+                contenedor.appendChild(divPostIt);
+            });
+        }
+
+        function toggleArchivar(id) {
+            const pedido = pedidos.find(p => p.id === id);
+            if (pedido) {
+                pedido.archivado = !pedido.archivado;
+                guardarEnMemoria();
+                renderizarPedidos();
+            }
+        }
+
+        // --- CONSOLIDACIÓN DE FALTANTES POR SUCURSAL PERSISTENTES ---
+        function renderizarFaltantesPorSucursal(contenedor) {
+            let acumFaltantes = { 'Maipu': {}, 'Mendoza': {}, 'Chango Mas': {} };
+
+            let listaFuentes = [];
+            pedidos.filter(p => p.tickCompletado).forEach(p => {
+                p.items.filter(i => !i.marcado || (i.soloTengo && i.soloTengo.trim() !== '')).forEach(item => {
+                    listaFuentes.push({ sucursal: p.sucursal, texto: item.texto });
+                });
+            });
+
+            faltantesHistoricos.forEach(h => {
+                listaFuentes.push({ sucursal: h.sucursal, texto: h.texto });
+            });
+
+            listaFuentes.forEach(elem => {
+                let parsed = extraerCantidadYNombre(elem.texto);
+                let clave = parsed.nombre.toLowerCase().trim();
+
+                if (!acumFaltantes[elem.sucursal][clave]) {
+                    acumFaltantes[elem.sucursal][clave] = { nombre: parsed.nombre, totalCantidad: 0, esUnidad: parsed.esUnidad };
+                }
+                acumFaltantes[elem.sucursal][clave].totalCantidad += parsed.cantidad;
+            });
+
+            function generarTextoConsolidado(sucursal) {
+                let lineas = [];
+                Object.values(acumFaltantes[sucursal]).forEach(obj => {
+                    let cantText = "";
+                    if (obj.esUnidad) {
+                        cantText = `${Math.ceil(obj.totalCantidad)} un`;
+                    } else {
+                        cantText = obj.totalCantidad >= 1 ? `${obj.totalCantidad}kg` : `${obj.totalCantidad * 1000}g`;
+                    }
+                    lineas.push(`- ${cantText} ${obj.nombre}`);
+                });
+                return lineas.join('\n');
+            }
+
+            const grid = document.createElement('div');
+            grid.className = 'contenedor-faltantes-grid';
+            grid.innerHTML = `
+                <div class="box-faltantes-sucursal maipu">
+                    <h3>🟢 Faltantes Maipú <button class="btn-accion" onclick="copiarTextoArea('txt-f-maipu')">📋 Copiar</button></h3>
+                    <input type="text" class="buscador-caja" id="busc-maipu" placeholder="🔍 Buscar en Maipú..." oninput="filtrarCajaFaltante('txt-f-maipu', 'busc-maipu')">
+                    <textarea class="area-copia-faltantes" id="txt-f-maipu" data-original="${generarTextoConsolidado('Maipu')}" readonly>${generarTextoConsolidado('Maipu') || 'Sin faltantes acumulados.'}</textarea>
+                </div>
+                <div class="box-faltantes-sucursal mendoza">
+                    <h3>🟠 Faltantes Mendoza <button class="btn-accion" onclick="copiarTextoArea('txt-f-mendoza')">📋 Copiar</button></h3>
+                    <input type="text" class="buscador-caja" id="busc-mendoza" placeholder="🔍 Buscar en Mendoza..." oninput="filtrarCajaFaltante('txt-f-mendoza', 'busc-mendoza')">
+                    <textarea class="area-copia-faltantes" id="txt-f-mendoza" data-original="${generarTextoConsolidado('Mendoza')}" readonly>${generarTextoConsolidado('Mendoza') || 'Sin faltantes acumulados.'}</textarea>
+                </div>
+                <div class="box-faltantes-sucursal chango">
+                    <h3>🟡 Faltantes Chango Mas <button class="btn-accion" onclick="copiarTextoArea('txt-f-chango')">📋 Copiar</button></h3>
+                    <input type="text" class="buscador-caja" id="busc-chango" placeholder="🔍 Buscar en Chango Mas..." oninput="filtrarCajaFaltante('txt-f-chango', 'busc-chango')">
+                    <textarea class="area-copia-faltantes" id="txt-f-chango" data-original="${generarTextoConsolidado('Chango Mas')}" readonly>${generarTextoConsolidado('Chango Mas') || 'Sin faltantes acumulados.'}</textarea>
+                </div>
+            `;
+            contenedor.appendChild(grid);
+        }
+
+        // --- FALTANTES GENERALES PERSISTENTES COMPARTIDOS ---
+        function renderizarFaltantesCompartidos(contenedor) {
+            let acumGlobal = {};
+
+            let listaFuentes = [];
+            pedidos.filter(p => p.tickCompletado).forEach(p => {
+                p.items.filter(i => !i.marcado || (i.soloTengo && i.soloTengo.trim() !== '')).forEach(item => {
+                    listaFuentes.push({ sucursal: p.sucursal, texto: item.texto });
+                });
+            });
+
+            faltantesHistoricos.forEach(h => {
+                listaFuentes.push({ sucursal: h.sucursal, texto: h.texto });
+            });
+
+            listaFuentes.forEach(elem => {
+                let parsed = extraerCantidadYNombre(elem.texto);
+                let clave = parsed.nombre.toLowerCase().trim();
+
+                if (!acumGlobal[clave]) {
+                    acumGlobal[clave] = { nombre: parsed.nombre, totalCantidad: 0, sucursales: new Set(), esUnidad: parsed.esUnidad };
+                }
+                acumGlobal[clave].totalCantidad += parsed.cantidad;
+                acumGlobal[clave].sucursales.add(elem.sucursal);
+            });
+
+            let list = [];
+            Object.values(acumGlobal).forEach(obj => {
+                let sucs = Array.from(obj.sucursales);
+                let cantText = obj.esUnidad ? `${Math.ceil(obj.totalCantidad)} un` : (obj.totalCantidad >= 1 ? `${obj.totalCantidad}kg` : `${obj.totalCantidad * 1000}g`);
+                let detalleSucs = sucs.length === 3 ? "Falta en las 3 sucursales" : `Falta en: ${sucs.join(', ')}`;
+                list.push(`- ${cantText} ${obj.nombre} (${detalleSucs})`);
+            });
+
+            const grid = document.createElement('div');
+            grid.className = 'contenedor-faltantes-grid';
+            grid.innerHTML = `
+                <div class="box-faltantes-sucursal general" style="grid-column: 1 / -1;">
+                    <h3>🔴 FALTANTES GENERALES COMPARTIDOS ACUMULADOS PERSISTENTES <button class="btn-accion" onclick="copiarTextoArea('txt-f-gen')">📋 Copiar</button></h3>
+                    <input type="text" class="buscador-caja" id="busc-gen" placeholder="🔍 Buscar en faltantes generales..." oninput="filtrarCajaFaltante('txt-f-gen', 'busc-gen')">
+                    <textarea class="area-copia-faltantes" id="txt-f-gen" style="height:220px;" data-original="${list.join('\n')}" readonly>${list.join('\n') || 'No hay faltantes acumulados.'}</textarea>
+                </div>
+            `;
+            contenedor.appendChild(grid);
+        }
+
+        function filtrarCajaFaltante(idTextarea, idBuscador) {
+            const area = document.getElementById(idTextarea);
+            const busq = document.getElementById(idBuscador).value.toLowerCase().trim();
+            const lineasOriginales = (area.getAttribute('data-original') || '').split('\n');
+
+            if (!busq) {
+                area.value = area.getAttribute('data-original');
+                return;
+            }
+
+            const filtradas = lineasOriginales.filter(linea => linea.toLowerCase().includes(busq));
+            area.value = filtradas.join('\n') || 'Sin coincidencias.';
+        }
+
+        // --- TARJETAS INTERACTIVAS FALTANTES POR PEDIDO ---
+        function renderizarFaltantesDePedidosEspecificos(contenedor) {
+            let hayFaltantes = false;
+
+            pedidos.forEach(pedido => {
+                if (pedido.tickCompletado && !pedido.archivado) {
+                    const faltantesDelPedido = pedido.items.filter(i => !i.marcado || (i.soloTengo && i.soloTengo.trim() !== ''));
+
+                    if (faltantesDelPedido.length > 0) {
+                        hayFaltantes = true;
+
+                        const divPostIt = document.createElement('div');
+                        divPostIt.className = 'post-it';
+                        divPostIt.style.borderLeft = '5px solid #e65100';
+
+                        divPostIt.innerHTML = `
+                            <div class="post-it-header" style="background:#fff3e0;">
+                                <h3 style="color:#e65100;">${pedido.nombre} <span>📍 Origen: ${pedido.sucursal}</span></h3>
+                            </div>
+                        `;
+
+                        const body = document.createElement('div');
+                        body.className = 'post-it-body';
+
+                        faltantesDelPedido.forEach(item => {
+                            const card = document.createElement('div');
+                            card.className = 'card-faltante-item';
+
+                            card.innerHTML = `
+                                <div style="font-size:12px; font-weight:bold; color:#2d3748;">- ${item.texto}</div>
+                                <div class="card-faltante-row">
+                                    <span>Asignar separación:</span>
+                                    <select id="suc-sep-${item.idItem}">
+                                        <option value="Maipu">Maipu</option>
+                                        <option value="Mendoza">Mendoza</option>
+                                        <option value="Chango Mas">Chango Mas</option>
+                                    </select>
+                                    <input type="text" id="cant-sep-${item.idItem}" placeholder="Cant. (500g)">
+                                    <button class="btn-verde" style="padding:2px 6px; font-size:10px;" onclick="agregarSeparacionMulti('${pedido.id}', '${item.idItem}')">➕</button>
+                                </div>
+                            `;
+
+                            if (item.separaciones && item.separaciones.length > 0) {
+                                const ulS = document.createElement('ul');
+                                ulS.style.cssText = 'margin:4px 0 0 0; padding-left:15px; font-size:10px; color:#2e7d32;';
+                                item.separaciones.forEach((s, idx) => {
+                                    ulS.innerHTML += `<li>${s.sucursal} separa <b>${s.cantidad}</b> <span style="color:red; cursor:pointer;" onclick="quitarSeparacionMulti('${pedido.id}', '${item.idItem}', ${idx})">❌</span></li>`;
+                                });
+                                card.appendChild(ulS);
+                            }
+
+                            body.appendChild(card);
+                        });
+
+                        divPostIt.appendChild(body);
+                        contenedor.appendChild(divPostIt);
+                    }
+                }
+            });
+
+            if (!hayFaltantes) {
+                contenedor.innerHTML = `<p style="color: #2e7d32; font-weight: bold; width: 100%;">🎉 No hay faltantes en los pedidos completados activos.</p>`;
+            }
+        }
+
+        // --- VISTA: CATÁLOGO DE PRODUCTOS (EXCEL) CON DETECCIÓN UNIDAD/PESO ---
+        function renderizarCatalogoProductos(contenedor) {
+            const box = document.createElement('div');
+            box.className = 'box-productos-catalogo';
+            box.innerHTML = `
+                <h3 style="color:#0284c7; margin-top:0;">📦 CATÁLOGO DE PRODUCTOS VITTA (${CATALOGO_PRODUCTOS_EXCEL.length} ítems)</h3>
+                <input type="text" class="buscador-caja" id="busc-catalogo" placeholder="🔍 Buscar producto en el catálogo..." oninput="filtrarTablaCatalogo()">
+                <div style="max-height:450px; overflow-y:auto;">
+                    <table class="tabla-productos" id="tablaCatalogo">
+                        <thead>
+                            <tr>
+                                <th>Descripción del Producto</th>
+                                <th style="width:120px;">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${CATALOGO_PRODUCTOS_EXCEL.map((prod) => `
+                                <tr>
+                                    <td>${prod}</td>
+                                    <td><button class="btn-verde" style="padding:3px 8px; font-size:10px;" onclick="agregarProductoAlArmador('${prod.replace(/'/g, "\\'")}')">➕ Agregar</button></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            contenedor.appendChild(box);
+        }
+
+        function filtrarTablaCatalogo() {
+            const query = document.getElementById('busc-catalogo').value.toLowerCase().trim();
+            const rows = document.querySelectorAll('#tablaCatalogo tbody tr');
+
+            rows.forEach(row => {
+                const text = row.cells[0].textContent.toLowerCase();
+                row.style.display = text.includes(query) ? '' : 'none';
+            });
+        }
+
+        function agregarProductoAlArmador(nombreProd) {
+            const areaTexto = document.getElementById('textoPedido');
+            
+            let esEmpaquetadoUnidad = /(gr|ml|lt|saq|pack|alfajor|barra|promo)/i.test(nombreProd);
+            let formatoAgregado = esEmpaquetadoUnidad ? `1 un - ${nombreProd}` : `1 kg ${nombreProd}`;
+
+            if (areaTexto.value.trim()) {
+                areaTexto.value += `\n${formatoAgregado}`;
+            } else {
+                areaTexto.value = formatoAgregado;
+            }
+            alert(`✅ Se agregó "${formatoAgregado}" al armador de pedidos.`);
+        }
+
+        // --- UTILIDADES ---
+        function agregarSeparacionMulti(idPedido, idItem) {
+            const suc = document.getElementById(`suc-sep-${idItem}`).value;
+            const cant = document.getElementById(`cant-sep-${idItem}`).value.trim();
+
+            if (!cant) { alert("Ingresa la cantidad que separa esta sucursal (Ej: 500g)."); return; }
+
+            const pedido = pedidos.find(p => p.id === idPedido);
+            if (pedido) {
+                const item = pedido.items.find(i => i.idItem === idItem);
+                if (item) {
+                    if (!item.separaciones) item.separaciones = [];
+                    item.separaciones.push({ sucursal: suc, cantidad: cant });
+                    guardarEnMemoria();
+                    renderizarPedidos();
+                }
+            }
+        }
+
+        function quitarSeparacionMulti(idPedido, idItem, index) {
+            const pedido = pedidos.find(p => p.id === idPedido);
+            if (pedido) {
+                const item = pedido.items.find(i => i.idItem === idItem);
+                if (item && item.separaciones) {
+                    item.separaciones.splice(index, 1);
+                    guardarEnMemoria();
+                    renderizarPedidos();
+                }
+            }
+        }
+
+        function copiarTextoArea(idArea) {
+            const area = document.getElementById(idArea);
+            if (area && area.value) {
+                area.select();
+                navigator.clipboard.writeText(area.value);
+                alert("📋 ¡Copiado al portapapeles!");
+            }
+        }
+
+        function habilitarEdicionFaltantes(idPedido) {
+            const area = document.getElementById(`faltantes-${idPedido}`);
+            if (area) { area.removeAttribute('readonly'); area.focus(); }
+        }
+
+        function guardarTextoFaltantes(idPedido, valor) {
+            const pedido = pedidos.find(p => p.id === idPedido);
+            if (pedido) { pedido.textoFaltantesGuardado = valor; guardarEnMemoria(); }
+        }
+
+        function cargarRemito(idPedido, event) {
+            const file = event.target.files[0];
+            if (file && file.type === 'application/pdf') {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const pedido = pedidos.find(p => p.id === idPedido);
+                    if (pedido) { pedido.remitoPdf = e.target.result; guardarEnMemoria(); renderizarPedidos(); }
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function verRemito(idPedido) {
+            const pedido = pedidos.find(p => p.id === idPedido);
+            if (pedido && pedido.remitoPdf) {
+                const win = window.open();
+                win.document.write(`<iframe src="${pedido.remitoPdf}" frameborder="0" style="border:0; top:0; left:0; width:100%; height:100%;" allowfullscreen></iframe>`);
+            }
+        }
+
+        function eliminarRemito(idPedido) {
+            if (confirm("¿Deseas quitar el remito?")) {
+                const pedido = pedidos.find(p => p.id === idPedido);
+                if (pedido) { pedido.remitoPdf = null; guardarEnMemoria(); renderizarPedidos(); }
+            }
+        }
+
+        function cambiarSesionChat(numSesion) {
+            sesionChatActiva = numSesion;
+            document.getElementById('tabChat1').classList.toggle('activo', numSesion === 1);
+            document.getElementById('tabChat2').classList.toggle('activo', numSesion === 2);
+            initChatUI();
+            renderizarPedidos();
+        }
+
+        function initChatUI() {
+            const currUser = getUsuarioChatActual();
+            const sessionBox = document.getElementById('chatSessionBox');
+            if (currUser) {
+                document.getElementById('chatAuthBox').style.display = 'none';
+                sessionBox.style.display = 'flex';
+                document.getElementById('chatUserDisplay').textContent = `${currUser.user} (${currUser.sucursal}) ${currUser.isAdmin ? '👑 ADMIN' : ''}`;
+                renderizarMensajesChat();
+            } else {
+                document.getElementById('chatAuthBox').style.display = 'block';
+                sessionBox.style.display = 'none';
+            }
+        }
+
+        function registrarUsuarioChat() {
+            const u = document.getElementById('regUser').value.trim();
+            const p = document.getElementById('regPass').value.trim();
+            const s = document.getElementById('regSucursal').value;
+            if (!u || !p) return;
+            if (chatUsuarios.find(x => x.user.toLowerCase() === u.toLowerCase())) { alert("Usuario existente."); return; }
+            chatUsuarios.push({ user: u, pass: p, sucursal: s, isAdmin: false });
+            guardarEnMemoria();
+            alert("Cuenta creada.");
+        }
+
+        function loginChat() {
+            const u = document.getElementById('loginUser').value.trim();
+            const p = document.getElementById('loginPass').value.trim();
+            const userFound = chatUsuarios.find(x => x.user.toLowerCase() === u.toLowerCase() && x.pass === p);
+            if (userFound) { setUsuarioChatActual(userFound); initChatUI(); }
+            else { alert("Credenciales incorrectas."); }
+        }
+
+        function logoutChat() { setUsuarioChatActual(null); initChatUI(); }
+
+        function enviarMensajeChat() {
+            const txtInput = document.getElementById('chatInputMsg');
+            const texto = txtInput.value.trim();
+            const currUser = getUsuarioChatActual();
+            if (texto && currUser) {
+                chatMensajes.push({
+                    id: Date.now().toString(), user: currUser.user, sucursal: currUser.sucursal,
+                    texto: texto, fecha: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                });
+                guardarEnMemoria(); txtInput.value = ''; renderizarMensajesChat();
+            }
+        }
+
+        function renderizarMensajesChat() {
+            const box = document.getElementById('chatMessagesBox');
+            box.innerHTML = '';
+            chatMensajes.forEach(msg => {
+                const div = document.createElement('div');
+                div.className = 'msg-item';
+                let classTag = msg.sucursal === 'Mendoza' ? 'tag-mendoza' : (msg.sucursal === 'Chango Mas' ? 'tag-chango' : 'tag-maipu');
+                let currUser = getUsuarioChatActual();
+                let acciones = (currUser && currUser.isAdmin) ? `<span class="msg-actions" onclick="editarMsgChat('${msg.id}')">✏️</span><span class="msg-actions" onclick="borrarMsgChat('${msg.id}')">🗑️</span>` : '';
+                div.innerHTML = `<span class="tag-suc ${classTag}">(${msg.sucursal})</span><b>${msg.user}:</b> ${msg.texto} <span style="font-size:8px; color:#a0aec0;">${msg.fecha}</span>${acciones}`;
+                box.appendChild(div);
+            });
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function borrarMsgChat(idMsg) { chatMensajes = chatMensajes.filter(m => m.id !== idMsg); guardarEnMemoria(); renderizarMensajesChat(); }
+        function editarMsgChat(idMsg) {
+            const m = chatMensajes.find(m => m.id === idMsg);
+            if (m) { const t = prompt("Editar:", m.texto); if (t) { m.texto = t.trim(); guardarEnMemoria(); renderizarMensajesChat(); } }
+        }
+
+        window.toggleMinimizar = function(id) {
+            const pedido = pedidos.find(p => p.id === id);
+            if (pedido) { pedido.minimizado = !pedido.minimizado; guardarEnMemoria(); renderizarPedidos(); }
+        }
+
+        window.eliminarPedido = function(id) {
+            if (confirm("¿Borrar definitivamente este pedido de la memoria?")) { pedidos = pedidos.filter(p => p.id !== id); guardarEnMemoria(); renderizarPedidos(); }
+        }
+
+        window.generarFaltantes = function(id) {
+            const pedido = pedidos.find(p => p.id === id);
+            if (pedido) {
+                let textoFaltantes = "";
+                pedido.items.forEach(item => {
+                    if (!item.marcado || (item.soloTengo && item.soloTengo.trim() !== '')) {
+                        textoFaltantes += `- ${item.texto}`;
+                        if (item.soloTengo) textoFaltantes += ` (Solo se preparó: ${item.soloTengo})`;
+                        if (item.reemplazo) textoFaltantes += ` [Reemplazo: ${item.reemplazo}]`;
+                        if (item.nota) textoFaltantes += ` [Nota: ${item.nota}]`;
+                        textoFaltantes += "\n";
+                    }
+                });
+                pedido.textoFaltantesGuardado = textoFaltantes || "¡Pedido completo! No falta nada.";
+                guardarEnMemoria();
+                renderizarPedidos();
+            }
+        }
+    </script>
+</body>
+</html>
